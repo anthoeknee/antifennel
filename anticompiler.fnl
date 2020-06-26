@@ -29,9 +29,9 @@
         (if (= 1 (# names))
             (sym (. names 1 :name))
             (list (unpack (map names compile))))
-        ;; TODO: support multiple values
-        (and (. expressions 1)
-             (compile (. expressions 1)))))
+        (if (= 1 (# expressions))
+            (compile (. expressions 1))
+            (list (sym :values) (unpack (map expressions compile))))))
 
 (fn vals [compile {: arguments}]
   (if (= 1 (# arguments))
