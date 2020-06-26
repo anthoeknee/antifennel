@@ -8,10 +8,9 @@
       (table.insert out (f v)))
     out))
 
-(local chunk-mt {1 "CHUNK"})
+(fn p [x] (print (view x))) ; debugging
 
-(fn p [x] (print (view x)))
-
+(local chunk-mt ["CHUNK"]) ; not doing anything w this yet; maybe useful later?
 (fn chunk [contents]
   (setmetatable contents chunk-mt))
 
@@ -54,7 +53,7 @@
   (list (sym ":")
         (compile receiver)
         method.name
-        (map arguments compile)))
+        (unpack (map arguments compile))))
 
 (fn member [compile {: object : property : computed}]
   (if computed
@@ -64,6 +63,7 @@
 (fn if* [compile {: tests : cons : alternate}]
   (if alternate
       (list (sym :if)
+            (compile (. tests 1))
             (if (= 1 (# (. cons 1)))
                 (compile (. cons 1 1))
                 (list (sym :do) (unpack (map (. cons 1) compile))))
@@ -71,6 +71,7 @@
                 (compile (. alternate 1))
                 (list (sym :do) (unpack (map alternate compile)))))
       (list (sym :when)
+            (compile (. tests 1))
             (unpack (map (. cons 1) compile)))))
 
 (fn concat [compile {: terms}]
@@ -108,10 +109,10 @@
 
 (fn table* [compile {: keyvals}]
   (let [out {}]
-    (each [i [k v] (pairs keyvals)]
-      (if v
+    (each [i [v k] (pairs keyvals)]
+      (if k
           (tset out (compile k) (compile v))
-          (tset out i (compile k))))
+          (tset out i (compile v))))
     out))
 
 (fn do* [compile {: body}]
