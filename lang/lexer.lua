@@ -377,9 +377,11 @@ local function llex(ls)
             if char_isdigit(current) then -- Numeric literal.
                 return 'TK_number', lex_number(ls)
             end
-            repeat
+            local function sn()
                 save_and_next(ls)
-            until not char_isident(ls.current)
+                if char_isident(ls.current) then return sn() end
+            end
+            sn()
             local s = get_string(ls, 0, 0)
             local reserved = ReservedKeyword[s]
             if reserved then
@@ -508,10 +510,12 @@ local function lex_setup(read_func, chunkname)
         header = true
     end
     if ls.current == '#' then
-        repeat
+        local function nc()
             nextchar(ls)
             if ls.current == END_OF_STREAM then return ls end
-        until curr_is_newline(ls)
+            if curr_is_newline(ls) then return nc() end
+        end
+        nc()
         inclinenumber(ls)
         header = true
     end

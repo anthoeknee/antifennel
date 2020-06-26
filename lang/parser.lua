@@ -339,9 +339,11 @@ local function parse_local(ast, ls)
         return ast:local_function_decl(name, args, body, proto)
     else -- Local variable declaration.
         local vl = { }
-        repeat -- Collect LHS.
+        local function collect_lhs()
             vl[#vl+1] = lex_str(ls)
-        until not lex_opt(ls, ',')
+            if lex_opt(ls, ',') then return collect_lhs() end
+        end
+        collect_lhs()
         local exps
         if lex_opt(ls, '=') then -- Optional RHS.
             exps = expr_list(ast, ls)
@@ -484,18 +486,20 @@ local function parse_params(ast, ls, needself)
         args[1] = "self"
     end
     if ls.token ~= ")" then
-        repeat
+        local function tk_args()
             if ls.token == 'TK_name' or (not LJ_52 and ls.token == 'TK_goto') then
                 local name = lex_str(ls)
                 args[#args+1] = name
+                if lex_opt(ls, ',') then return tk_args() end
             elseif ls.token == 'TK_dots' then
                 ls:next()
                 vararg = true
-                break
             else
-                err_syntax(ls, "<name> or \"...\" expected")
+               err_syntax(ls, "<name> or \"...\" expected")
+               if lex_opt(ls, ',') then return tk_args() end
             end
-        until not lex_opt(ls, ',')
+        end
+        tk_args()
     end
     lex_check(ls, ")")
     return args, vararg
