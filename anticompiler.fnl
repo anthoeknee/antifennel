@@ -25,11 +25,13 @@
     (table.insert 2 (compile ast.id))))
 
 (fn local-declaration [compile {: names : expressions}]
-  (list (sym :local)
+  (list (sym :var)
         (if (= 1 (# names))
             (sym (. names 1 :name))
             (list (unpack (map names compile))))
-        (compile (. expressions 1))))
+        ;; TODO: support multiple values
+        (and (. expressions 1)
+             (compile (. expressions 1)))))
 
 (fn vals [compile {: arguments}]
   (if (= 1 (# arguments))
@@ -40,6 +42,10 @@
   (list (sym operator)
         (compile left)
         (compile right)))
+
+(fn unary [compile {: argument : operator} ast]
+  (list (sym operator)
+        (compile argument)))
 
 (fn call [compile {: arguments : callee}]
   (list (compile callee) (unpack (map arguments compile))))
@@ -56,7 +62,6 @@
       (sym (.. (tostring (compile object)) "." property.name))))
 
 (fn if* [compile {: tests : cons : alternate}]
-  (p (map (. cons 1) compile))
   (list (sym :if)
         (list (sym :do) (unpack (map (. cons 1) compile)))
         (if alternate (list (sym :do) (unpack (map (. alternate 1) compile))))))
@@ -74,10 +79,37 @@
           binding
           (unpack (map body compile)))))
 
+(fn assignment [compile {: left : right}]
+  (list (sym :set)
+        (if (= 1 (# left))
+            (sym (. left 1 :name))
+            (list (unpack (map left compile))))
+        (if (= 1 (# right))
+            (compile (. right 1))
+            (list (sym :values) (map right compile)))))
+
+(fn while* [compile {: test : body}]
+  (list (sym :while)
+        (compile test)
+        (unpack (map body compile))))
+
+(fn for* [compile {: init : last : step : body}]
+  (list (sym :for)
+        [(compile init.id) (compile init.value) (compile last)
+         (and step (compile step))]
+        (unpack (map body compile))))
+
+(fn table* [compile {: keyvals}]
+  (let [out {}]
+    (each [_ [k v] (pairs keyvals)]
+      (tset out (compile k) (compile v)))
+    out))
+
 (fn unsupported [{: kind}]
   (error (.. kind " is not supported.")))
 
 (fn compile [ast]
+  (when (os.getenv "DEBUG") (print ast.kind))
   (match ast.kind
     "Chunk" (chunk (map ast.body compile)) ; top-level container of expressions
     "LocalDeclaration" (local-declaration compile ast)
@@ -94,16 +126,16 @@
     "ConcatenateExpression" (concat compile ast)
     "ForInStatement" (each* compile ast)
     "LogicalExpression" (binary compile ast)
+    "AssignmentExpression" (assignment compile ast)
+    "WhileStatement" (while* compile ast)
+    "ForStatement" (for* compile ast)
+    "UnaryExpression" (unary compile ast)
+    "Table" (table* compile ast)
 
-    ;; "WhileStatement" (while* compile ast)
     ;; "DoStatement" (do* compile ast)
-    ;; "ForStatement" (for* compile ast)
     ;; "StatementsGroup" ???
-    ;; "Table" ???
-    ;; "UnaryExpression" ???
     ;; "ExpressionValue" ???
     ;; "Vararg" ???
-    ;; "AssignmentExpression" (assignment compile ast)
 
     ;; TODO: confirm it's in the tail position; otherwise compile to lua special
     "ReturnStatement" (vals compile ast)
@@ -112,4 +144,4 @@
     "RepeatStatement" (unsupported ast)
     "GotoStatement" (unsupported ast)
     "LabelStatement" (unsupported ast)
-    _ (error (.. "Unknown node: " (view ast)))))
+    _ (error (.. "Unknown node: " ast.kind " " (view ast)))))
