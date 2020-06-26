@@ -62,9 +62,16 @@
       (sym (.. (tostring (compile object)) "." property.name))))
 
 (fn if* [compile {: tests : cons : alternate}]
-  (list (sym :if)
-        (list (sym :do) (unpack (map (. cons 1) compile)))
-        (if alternate (list (sym :do) (unpack (map (. alternate 1) compile))))))
+  (if alternate
+      (list (sym :if)
+            (if (= 1 (# (. cons 1)))
+                (compile (. cons 1 1))
+                (list (sym :do) (unpack (map (. cons 1) compile))))
+            (if (= 1 (# alternate))
+                (compile (. alternate 1))
+                (list (sym :do) (unpack (map alternate compile)))))
+      (list (sym :when)
+            (unpack (map (. cons 1) compile)))))
 
 (fn concat [compile {: terms}]
   (list (sym "..")
