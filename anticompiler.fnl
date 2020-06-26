@@ -101,9 +101,18 @@
 
 (fn table* [compile {: keyvals}]
   (let [out {}]
-    (each [_ [k v] (pairs keyvals)]
-      (tset out (compile k) (compile v)))
+    (each [i [k v] (pairs keyvals)]
+      (if v
+          (tset out (compile k) (compile v))
+          (tset out i (compile k))))
     out))
+
+(fn do* [compile {: body}]
+  (list (sym :do)
+        (unpack (map body compile))))
+
+(fn break [compile ast]
+  (list (sym :lua) :break))
 
 (fn unsupported [{: kind}]
   (error (.. kind " is not supported.")))
@@ -131,17 +140,15 @@
     "ForStatement" (for* compile ast)
     "UnaryExpression" (unary compile ast)
     "Table" (table* compile ast)
-
-    ;; "DoStatement" (do* compile ast)
-    ;; "StatementsGroup" ???
-    ;; "ExpressionValue" ???
-    ;; "Vararg" ???
+    "BreakStatement" (break compile ast)
+    "DoStatement" (do* compile ast)
+    "Vararg" (sym "...")
 
     ;; TODO: confirm it's in the tail position; otherwise compile to lua special
     "ReturnStatement" (vals compile ast)
 
-    "BreakStatement" (unsupported ast)
     "RepeatStatement" (unsupported ast)
     "GotoStatement" (unsupported ast)
     "LabelStatement" (unsupported ast)
-    _ (error (.. "Unknown node: " ast.kind " " (view ast)))))
+    nil (sym :nil)
+    _ (error (.. "Unknown node: " (view ast)))))
