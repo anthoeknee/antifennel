@@ -62,18 +62,26 @@
       (sym (.. (tostring (compile object)) "." property.name))))
 
 (fn if* [compile {: tests : cons : alternate}]
-  (if alternate
-      (list (sym :if)
-            (compile (. tests 1))
-            (if (= 1 (# (. cons 1)))
-                (compile (. cons 1 1))
-                (list (sym :do) (unpack (map (. cons 1) compile))))
-            (if (= 1 (# alternate))
-                (compile (. alternate 1))
-                (list (sym :do) (unpack (map alternate compile)))))
+  (each [_ v (ipairs cons)]
+    (when (= 0 (# v)) ; check for empty consequent branches
+      (table.insert v (sym :nil))))
+  (if (and (not alternate) (= 1 (# tests)))
       (list (sym :when)
             (compile (. tests 1))
-            (unpack (map (. cons 1) compile)))))
+            (unpack (map (. cons 1) compile)))
+      (let [out (list (sym :if))]
+        (each [i test (ipairs tests)]
+          (table.insert out (compile test))
+          (let [c (. cons i)]
+            (table.insert out (if (= 1 (# c))
+                                  (compile (. c 1))
+                                  (list (sym :do) (unpack (map c compile)))))))
+        (when alternate
+          (table.insert out (if (= 1 (# alternate))
+                                (compile (. alternate 1))
+                                (list (sym :do)
+                                      (unpack (map alternate compile))))))
+        out)))
 
 (fn concat [compile {: terms}]
   (list (sym "..")
