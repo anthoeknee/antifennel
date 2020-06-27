@@ -168,6 +168,7 @@
     "BreakStatement" (break compile ast)
     "DoStatement" (do* compile ast)
     "Vararg" (sym "...")
+    nil (sym :nil)
 
     ;; TODO: confirm it's in the tail position; otherwise compile to lua special
     "ReturnStatement" (vals compile ast)
