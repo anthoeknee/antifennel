@@ -20,8 +20,12 @@
         (unpack (map body compile))))
 
 (fn declare-function [compile ast]
-  (doto (function compile ast)
-    (table.insert 2 (compile ast.id))))
+  (if (or ast.locald (= :MemberExpression ast.id.kind))
+      (doto (function compile ast)
+        (table.insert 2 (compile ast.id)))
+      (list (sym :set-forcibly!)
+            (compile ast.id)
+            (function compile ast))))
 
 (fn local-declaration [compile {: names : expressions}]
   (list (sym :var)
