@@ -17,10 +17,10 @@ assignments use `set-forcibly!` even when regular `set` would do the
 trick, because we don't track the difference between locals that come
 from `var` vs function parameters.
 
-Early returns will compile to invalid Fennel. (This is the only thing
-keeping Antifennel from being able to compile its own lexer.)
-
 ## Inherent Limitations
+
+Early returns will compile to very ugly Fennel code, but they should
+be correct.
 
 Certain Lua constructs are not supported in Fennel such as `goto` and `repeat`.
 

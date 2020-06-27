@@ -9,7 +9,7 @@ PARSER_FENNEL=lang/reader.fnl \
 		lang/operator.fnl \
 		lang/id_generator.fnl \
 		lang/lua_ast.fnl \
-		# lang/lexer.fnl \
+		lang/lexer.fnl \
 		lang/parser.fnl
 
 test: all

@@ -2,10 +2,11 @@
 (local view (require :fennelview))
 (local {: list : sym} fennel)
 
-(fn map [tbl f]
-  (let [out []]
-    (each [_ v (ipairs tbl)]
-      (table.insert out (f v)))
+(fn map [tbl f with-last?]
+  (let [len (# tbl)
+        out []]
+    (each [i v (ipairs tbl)]
+      (table.insert out (f v (and with-last? (= i len)))))
     out))
 
 (fn p [x] (print (view x))) ; debugging
@@ -17,7 +18,7 @@
 (fn function [compile {: vararg : params : body}]
   (list (sym :fn)
         (map params compile)
-        (unpack (map body compile))))
+        (unpack (map body compile true))))
 
 (fn declare-function [compile ast]
   (if (or ast.locald (= :MemberExpression ast.id.kind))
@@ -40,6 +41,21 @@
   (if (= 1 (# arguments))
       (compile (. arguments 1))
       (list (sym :values) (unpack (map arguments compile)))))
+
+(fn early-return [compile {: arguments}]
+  ;; we have to precompile the args and let-bind them because we can't put
+  ;; Fennel expressions inside the lua special form.
+  (let [args (map arguments compile)
+        binding-names []
+        bindings []]
+    ;; TODO: skip this when the values being returned are literals/identifiers!
+    (each [i a (ipairs args)]
+      (table.insert binding-names (.. "___antifnl_rtn_" i "___"))
+      (table.insert bindings (sym (. binding-names i)))
+      (table.insert bindings a))
+    (list (sym :let) bindings
+          (list (sym :lua)
+                (.. "return " (table.concat binding-names ", "))))))
 
 (fn binary [compile {: left : right : operator} ast]
   (let [operators {:== := "~=" :not= "#" :length "~" :bnot}]
@@ -65,26 +81,27 @@
       (list (sym ".") (compile object) (compile property))
       (sym (.. (tostring (compile object)) "." property.name))))
 
-(fn if* [compile {: tests : cons : alternate}]
+(fn if* [compile {: tests : cons : alternate} tail?]
   (each [_ v (ipairs cons)]
     (when (= 0 (# v)) ; check for empty consequent branches
       (table.insert v (sym :nil))))
   (if (and (not alternate) (= 1 (# tests)))
       (list (sym :when)
             (compile (. tests 1))
-            (unpack (map (. cons 1) compile)))
+            (unpack (map (. cons 1) compile tail?)))
       (let [out (list (sym :if))]
         (each [i test (ipairs tests)]
           (table.insert out (compile test))
           (let [c (. cons i)]
             (table.insert out (if (= 1 (# c))
-                                  (compile (. c 1))
-                                  (list (sym :do) (unpack (map c compile)))))))
+                                  (compile (. c 1) tail?)
+                                  (list (sym :do)
+                                        (unpack (map c compile tail?)))))))
         (when alternate
           (table.insert out (if (= 1 (# alternate))
-                                (compile (. alternate 1))
+                                (compile (. alternate 1) tail?)
                                 (list (sym :do)
-                                      (unpack (map alternate compile))))))
+                                      (unpack (map alternate compile tail?))))))
         out)))
 
 (fn concat [compile {: terms}]
@@ -136,9 +153,9 @@
           (tset out i (compile v))))
     out))
 
-(fn do* [compile {: body}]
+(fn do* [compile {: body} tail?]
   (list (sym :do)
-        (unpack (map body compile))))
+        (unpack (map body compile tail?))))
 
 (fn break [compile ast]
   (list (sym :lua) :break))
@@ -146,38 +163,38 @@
 (fn unsupported [{: kind}]
   (error (.. kind " is not supported.")))
 
-(fn compile [ast]
+(fn compile [ast tail?]
   (when (os.getenv "DEBUG") (print ast.kind))
   (match ast.kind
-    "Chunk" (chunk (map ast.body compile)) ; top-level container of expressions
+    "Chunk" (chunk (map ast.body compile true)) ; top-level container of exprs
     "LocalDeclaration" (local-declaration compile ast)
-    "FunctionExpression" (function compile ast)
     "FunctionDeclaration" (declare-function compile ast)
+
+    "FunctionExpression" (function compile ast)
     "BinaryExpression" (binary compile ast)
-    "ExpressionStatement" (compile ast.expression)
-    "CallExpression" (call compile ast)
-    "Identifier" (sym ast.name)
-    "Literal" (if (= nil ast.value) (sym :nil) ast.value)
-    "SendExpression" (send compile ast)
-    "MemberExpression" (member compile ast)
-    "IfStatement" (if* compile ast)
     "ConcatenateExpression" (concat compile ast)
-    "ForInStatement" (each* compile ast)
+    "CallExpression" (call compile ast)
     "LogicalExpression" (binary compile ast)
     "AssignmentExpression" (assignment compile ast)
+    "SendExpression" (send compile ast)
+    "MemberExpression" (member compile ast)
+    "UnaryExpression" (unary compile ast)
+    "ExpressionStatement" (compile ast.expression)
+
+    "IfStatement" (if* compile ast tail?)
+    "DoStatement" (do* compile ast tail?)
+    "ForInStatement" (each* compile ast)
     "WhileStatement" (while* compile ast)
     "ForStatement" (for* compile ast)
-    "UnaryExpression" (unary compile ast)
-    "Table" (table* compile ast)
     "BreakStatement" (break compile ast)
-    "DoStatement" (do* compile ast)
+    "ReturnStatement" (if tail?
+                          (vals compile ast)
+                          (early-return compile ast))
+
+    "Identifier" (sym ast.name)
+    "Table" (table* compile ast)
+    "Literal" (if (= nil ast.value) (sym :nil) ast.value)
     "Vararg" (sym "...")
     nil (sym :nil)
 
-    ;; TODO: confirm it's in the tail position; otherwise compile to lua special
-    "ReturnStatement" (vals compile ast)
-
-    "RepeatStatement" (unsupported ast)
-    "GotoStatement" (unsupported ast)
-    "LabelStatement" (unsupported ast)
-    _ (error (.. "Unknown node: " (view ast)))))
+    _ (unsupported ast)))
