@@ -1,10 +1,11 @@
 local fennel = require('fennel')
 local view = require('fennelview')
+local searcher = fennel.makeSearcher({correlate=true})
 
 if os.getenv("FNL") then -- prefer Fennel to Lua when both exist
-   table.insert(package.loaders or package.searchers, 1, fennel.searcher)
+   table.insert(package.loaders or package.searchers, 1, searcher)
 else
-   table.insert(package.loaders or package.searchers, fennel.searcher)
+   table.insert(package.loaders or package.searchers, searcher)
 end
 
 local lex_setup = require('lang.lexer')
