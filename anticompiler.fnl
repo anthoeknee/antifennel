@@ -39,7 +39,7 @@
 (fn vals [compile {: arguments}]
   (if (= 1 (# arguments))
       (compile (. arguments 1))
-      (list (sym :values) (map arguments compile))))
+      (list (sym :values) (unpack (map arguments compile)))))
 
 (fn binary [compile {: left : right : operator} ast]
   (let [operators {:== := "~=" :not= "#" :length "~" :bnot}]
@@ -105,7 +105,7 @@
     (error "Unsupported form; tset cannot set multiple values."))
   (let [right-out (if (= 1 (# right))
                       (compile (. right 1))
-                      (list (sym :values) (map right compile)))]
+                      (list (sym :values) (unpack (map right compile))))]
     (if (. left 1 :computed)
         (list (sym :tset)
               (compile (. left 1 :object))
