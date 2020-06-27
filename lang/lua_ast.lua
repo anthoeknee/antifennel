@@ -5,7 +5,15 @@ local function build(kind, node)
     return node
 end
 
-local function ident(name, line)
+local reservedFennel = {['doc']=true, ['lua']=true, ['hashfn']=true,
+   ['macro']=true, ['macros']=true, ['macroexpand']=true, ['macrodebug']=true,
+   ['values']=true, ['when']=true, ['each']=true, ['fn']=true, ['lambda']=true,
+   ['partial']=true, ['set']=true, ['global']=true, ['var']=true, ['let']=true,
+   ['tset']=true, ['doto']=true, ['match']=true, ['rshift']=true,
+   ['lshift']=true, ['bor']=true, ['band']=true, ['bnot']=true, ['bxor']=true}
+
+local function ident(name, line, field)
+    if not field and reservedFennel[name] then name = "___" .. name .. "___" end
     return build("Identifier", { name = name, line = line })
 end
 
@@ -14,7 +22,7 @@ local function literal(value, line)
 end
 
 local function field(obj, name, line)
-    return build("MemberExpression", { object = obj, property = ident(name), computed = false, line = line })
+    return build("MemberExpression", { object = obj, property = ident(name, nil, true), computed = false, line = line })
 end
 
 local function logical_binop(op, left, right, line)
@@ -98,7 +106,7 @@ function AST.expr_index(ast, v, index, line)
 end
 
 function AST.expr_property(ast, v, prop, line)
-    local index = ident(prop, line)
+    local index = ident(prop, line, true)
     return build("MemberExpression", { object = v, property = index, computed = false, line = line })
 end
 
