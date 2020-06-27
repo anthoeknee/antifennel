@@ -4,22 +4,24 @@ Turn Lua code into Fennel code.
 
 Does the opposite of what the Fennel compiler does.
 
+Very immature.
+
 ## Usage
 
     $ luajit antifennel.lua targetfile.lua > targetfile.fnl
 
-## Limitations
+## Current limitations
 
-Very immature.
+Assumes all locals are vars, even if they are not modified. All
+assignments use `set-forcibly!` even when regular `set` would do the
+trick, because we don't track the difference between locals that come
+from `var` vs function parameters.
 
-Currently it does very little validation and will almost certainly
-emit Fennel which won't compile. It assumes all locals are vars even
-if they are never modified.
+Early returns will compile to invalid Fennel.
 
-Certain Lua constructs are not supported in Fennel such as `goto`,
-`repeat`, `break`, and early `return`s.
+## Inherent Limitations
 
-Setting globals is not supported unless you use `_G.foo = bar` notation.
+Certain Lua constructs are not supported in Fennel such as `goto` and `repeat`.
 
 ## Copyright
 

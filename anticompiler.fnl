@@ -38,9 +38,10 @@
       (list (sym :values) (map arguments compile))))
 
 (fn binary [compile {: left : right : operator} ast]
-  (list (sym operator)
-        (compile left)
-        (compile right)))
+  (let [operators {:== := "~=" :not= "#" :length "~" :bnot}]
+    (list (sym (or (. operators operator) operator))
+          (compile left)
+          (compile right))))
 
 (fn unary [compile {: argument : operator} ast]
   (list (sym operator)
@@ -88,13 +89,21 @@
           (unpack (map body compile)))))
 
 (fn assignment [compile {: left : right}]
-  (list (sym :set)
-        (if (= 1 (# left))
-            (sym (. left 1 :name))
-            (list (unpack (map left compile))))
-        (if (= 1 (# right))
-            (compile (. right 1))
-            (list (sym :values) (map right compile)))))
+  (when (and (. left 1 :computed) (< 1 (# left)))
+    (error "Unsupported form; tset cannot set multiple values."))
+  (let [right-out (if (= 1 (# right))
+                      (compile (. right 1))
+                      (list (sym :values) (map right compile)))]
+    (if (. left 1 :computed)
+        (list (sym :tset)
+              (compile (. left 1 :object))
+              (compile (. left 1 :property))
+              right-out)
+        (list (sym :set-forcibly!)
+              (if (= 1 (# left))
+                  (compile (. left 1))
+                  (list (unpack (map left compile))))
+              right-out))))
 
 (fn while* [compile {: test : body}]
   (list (sym :while)
@@ -136,7 +145,7 @@
     "ExpressionStatement" (compile ast.expression)
     "CallExpression" (call compile ast)
     "Identifier" (sym ast.name)
-    "Literal" ast.value
+    "Literal" (if (= nil ast.value) (sym :nil) ast.value)
     "SendExpression" (send compile ast)
     "MemberExpression" (member compile ast)
     "IfStatement" (if* compile ast)
@@ -158,5 +167,4 @@
     "RepeatStatement" (unsupported ast)
     "GotoStatement" (unsupported ast)
     "LabelStatement" (unsupported ast)
-    nil (sym :nil)
     _ (error (.. "Unknown node: " (view ast)))))
