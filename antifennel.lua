@@ -1,7 +1,4 @@
--- work around weird bug triggered by include
-local fennel, lex_setup, parse, lua_ast, reader, compiler, fnlfmt
-fennel = require('fennel')
-
+local fennel = require('fennel')
 local searcher = fennel.makeSearcher({correlate=true})
 
 if os.getenv("FNL") then -- prefer Fennel to Lua when both exist
@@ -10,13 +7,13 @@ else
    table.insert(package.loaders or package.searchers, searcher)
 end
 
-lex_setup = require('lang.lexer')
-parse = require('lang.parser')
-lua_ast = require('lang.lua_ast')
-reader = require('lang.reader')
+local lex_setup = require('lang.lexer')
+local parse = require('lang.parser')
+local lua_ast = require('lang.lua_ast')
+local reader = require('lang.reader')
 
-compiler = require('anticompiler')
-fnlfmt = require("fnlfmt")
+local compiler = require('anticompiler')
+local fnlfmt = require("fnlfmt")
 
 local function compile(rdr, filename)
    local ls = lex_setup(rdr, filename)
