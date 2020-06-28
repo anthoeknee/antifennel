@@ -138,11 +138,11 @@
   (when (and (. left 1 :computed) (< 1 (# left)))
     (error "Unsupported form; tset cannot set multiple values."))
   (list (sym :tset)
-              (compile (. left 1 :object))
-              (if left.computed
-                  (compile (. left 1 :property))
-                  (view (compile (. left 1 :property))))
-              right-out))
+        (compile (. left 1 :object))
+        (if (= (. left 1 :property :kind) "Identifier")
+            (. left 1 :property :name)
+            (compile (. left 1 :property)))
+        right-out))
 
 (fn assignment [compile {: left : right}]
   (let [right-out (if (= 1 (# right))

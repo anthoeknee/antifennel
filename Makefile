@@ -12,7 +12,7 @@ PARSER_FENNEL=lang/reader.fnl \
 		lang/lexer.fnl \
 		lang/parser.fnl
 
-antifennel: antifennel.fnl anticompiler.fnl # $(PARSER_FENNEL)
+antifennel: antifennel.fnl anticompiler.fnl $(PARSER_FENNEL)
 	echo "#!/usr/bin/env luajit" > $@
 	fennel --require-as-include --compile $< >> $@
 	chmod 755 $@
