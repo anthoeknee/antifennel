@@ -87,9 +87,10 @@
         method.name
         (unpack (map arguments compile))))
 
+(fn any-computed? [ast]
+  (or ast.computed (and ast.object (any-computed? ast.object))))
+
 (fn member [compile ast]
-  (fn any-computed? [ast]
-    (or ast.computed (and ast.object (any-computed? ast.object))))
   ;; this could be collapsed into a single dot call since those go nested
   (if (any-computed? ast)
       (list (sym ".") (compile ast.object) (if ast.computed
@@ -133,17 +134,22 @@
           binding
           (unpack (map body compile)))))
 
-(fn assignment [compile {: left : right}]
+(fn tset* [compile left right-out]
   (when (and (. left 1 :computed) (< 1 (# left)))
     (error "Unsupported form; tset cannot set multiple values."))
+  (list (sym :tset)
+              (compile (. left 1 :object))
+              (if left.computed
+                  (compile (. left 1 :property))
+                  (view (compile (. left 1 :property))))
+              right-out))
+
+(fn assignment [compile {: left : right}]
   (let [right-out (if (= 1 (# right))
                       (compile (. right 1))
                       (list (sym :values) (unpack (map right compile))))]
-    (if (. left 1 :computed)
-        (list (sym :tset)
-              (compile (. left 1 :object))
-              (compile (. left 1 :property))
-              right-out)
+    (if (any-computed? (. left 1))
+        (tset* compile left right-out)
         (list (sym :set-forcibly!)
               (if (= 1 (# left))
                   (compile (. left 1))
