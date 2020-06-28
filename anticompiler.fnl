@@ -150,6 +150,12 @@
         (compile test)
         (unpack (map body compile))))
 
+(fn repeat* [compile {: test : body}]
+  (list (sym :while) true
+        (unpack (doto (map body compile)
+                  (table.insert (list (sym :when) (compile test)
+                                      (list (sym :lua) :break)))))))
+
 (fn for* [compile {: init : last : step : body}]
   (list (sym :for)
         [(compile init.id) (compile init.value) (compile last)
@@ -196,6 +202,7 @@
     "DoStatement" (do* compile ast tail?)
     "ForInStatement" (each* compile ast)
     "WhileStatement" (while* compile ast)
+    "RepeatStatement" (repeat* compile ast)
     "ForStatement" (for* compile ast)
     "BreakStatement" (break compile ast)
     "ReturnStatement" (if tail?

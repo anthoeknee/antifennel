@@ -22,11 +22,11 @@ from `var` vs function parameters.
 Early returns will compile to very ugly Fennel code, but they should
 be correct.
 
-Certain Lua constructs are not supported in Fennel such as `goto` and `repeat`.
+Fennel code does not support `goto`.
 
 ## Copyright
 
-Copyright © 2020 Phil Hagelberg and Contributors
+Copyright © 2020 Phil Hagelberg and contributors
 Released under the MIT/X11 license, same as Fennel
 
 Lua parser/lexer (contents of the `lang/` directory) 
