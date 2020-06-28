@@ -11,4 +11,5 @@
 (var compiler (require "anticompiler"))
 (fn compile [rdr filename] (var ls (lex_setup rdr filename)) (var ast_builder (lua_ast.New)) (var ast_tree (parse ast_builder ls)) (compiler ast_tree filename))
 (var filename (. arg 1))
-(each [_ code (ipairs (compile (reader.file filename) filename))] (print (view code)))
+(var f (and filename (io.open filename)))
+(if f (do (: f "close") (each [_ code (ipairs (compile (reader.file filename) filename))] (print (view code)))) (do (print (: "Usage: %s LUA_FILENAME" "format" (. arg 0))) (print "Compiles LUA_FILENAME to Fennel and prints output.") (os.exit 1)))

@@ -23,6 +23,14 @@ local function compile(rdr, filename)
 end
 
 local filename = arg[1]
-for _,code in ipairs(compile(reader.file(filename), filename)) do
-   print(view(code))
+local f = filename and io.open(filename)
+if f then
+   f:close()
+   for _,code in ipairs(compile(reader.file(filename), filename)) do
+      print(view(code))
+   end
+else
+   print(("Usage: %s LUA_FILENAME"):format(arg[0]))
+   print("Compiles LUA_FILENAME to Fennel and prints output.")
+   os.exit(1)
 end
