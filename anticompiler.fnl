@@ -66,7 +66,7 @@
     (if (any-complex-expressions? arguments 1)
         (early-return-complex compile args)
         (list (sym :lua)
-              (.. "return " (table.concat (map args tostring) ", "))))))
+              (.. "return " (table.concat (map args view) ", "))))))
 
 (fn binary [compile {: left : right : operator} ast]
   (let [operators {:== := "~=" :not= "#" :length "~" :bnot}]
