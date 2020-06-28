@@ -29,7 +29,6 @@ self: $(PARSER_FENNEL)
 
 lang/%.fnl: lang/%.lua anticompiler.fnl
 	luajit antifennel.lua $< > $@
-	fnlfmt --fix $@
 
 clean: ; rm -f lang/*.fnl antifennel.fnl antifennel
 

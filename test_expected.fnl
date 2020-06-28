@@ -8,3 +8,5 @@
 
 (tset ids k (: ast "var_declare" (. vlist k)))
 
+(: string "match" "abc")
+

@@ -150,7 +150,7 @@ function AST.identifier(ast, name)
 end
 
 function AST.expr_method_call(ast, v, key, args, line)
-    local m = ident(key)
+    local m = ident(key, nil, true)
     return build("SendExpression", { receiver = v, method = m, arguments = args, line = line })
 end
 
