@@ -42,13 +42,17 @@
       (compile (. arguments 1))
       (list (sym :values) (unpack (map arguments compile)))))
 
-(fn early-return [compile {: arguments}]
+(fn any-complex-expressions? [args i]
+  (let [a (. args i)]
+    (if (= nil a) false
+        (not (or (= a.kind "Identifier") (= a.kind "Literal"))) true
+        (any-complex-expressions? args (+ i 1)))))
+
+(fn early-return-complex [compile args]
   ;; we have to precompile the args and let-bind them because we can't put
   ;; Fennel expressions inside the lua special form.
-  (let [args (map arguments compile)
-        binding-names []
+  (let [binding-names []
         bindings []]
-    ;; TODO: skip this when the values being returned are literals/identifiers!
     (each [i a (ipairs args)]
       (table.insert binding-names (.. "___antifnl_rtn_" i "___"))
       (table.insert bindings (sym (. binding-names i)))
@@ -56,6 +60,13 @@
     (list (sym :let) bindings
           (list (sym :lua)
                 (.. "return " (table.concat binding-names ", "))))))
+
+(fn early-return [compile {: arguments}]
+  (let [args (map arguments compile)]
+    (if (any-complex-expressions? arguments 1)
+        (early-return-complex compile args)
+        (list (sym :lua)
+              (.. "return " (table.concat (map args tostring) ", "))))))
 
 (fn binary [compile {: left : right : operator} ast]
   (let [operators {:== := "~=" :not= "#" :length "~" :bnot}]
