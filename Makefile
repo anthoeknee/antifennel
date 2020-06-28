@@ -12,23 +12,23 @@ PARSER_FENNEL=lang/reader.fnl \
 		lang/lexer.fnl \
 		lang/parser.fnl
 
-test: antifennel all
-	diff antifennel.fnl antifennel_expected.fnl
-
-antifennel.fnl: antifennel.lua
-	luajit antifennel.lua antifennel.lua > antifennel.fnl
-
-all: $(PARSER_FENNEL)
-
-lang/%.fnl: lang/%.lua anticompiler.fnl
-	luajit antifennel.lua $< > $@
-	fnlfmt --fix $@
-
 antifennel: antifennel.fnl anticompiler.fnl $(PARSER_FENNEL)
 	echo "#!/usr/bin/env luajit" > $@
 	fennel --require-as-include --compile $< >> $@
 	chmod 755 $@
 
+test: antifennel self
+	diff antifennel.fnl antifennel_expected.fnl
+
+antifennel.fnl: antifennel.lua
+	luajit antifennel.lua antifennel.lua > antifennel.fnl
+
+self: $(PARSER_FENNEL)
+
+lang/%.fnl: lang/%.lua anticompiler.fnl
+	luajit antifennel.lua $< > $@
+	fnlfmt --fix $@
+
 clean: ; rm -f lang/*.fnl antifennel.fnl antifennel
 
-.PHONY: test all clean
+.PHONY: test self clean
