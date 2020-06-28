@@ -17,26 +17,6 @@ local function ident(name, line, field)
     return build("Identifier", { name = name, line = line })
 end
 
-local function literal(value, line)
-    return build("Literal", { value = value, line = line })
-end
-
-local function field(obj, name, line)
-    return build("MemberExpression", { object = obj, property = ident(name, nil, true), computed = false, line = line })
-end
-
-local function logical_binop(op, left, right, line)
-    return build("LogicalExpression", { operator = op, left = left, right = right, line = line })
-end
-
-local function binop(op, left, right, line)
-    return build("BinaryExpression", { operator = op, left = left, right = right, line = line })
-end
-
-local function empty_table(line)
-    return build("Table", { keyvals = { }, line = line })
-end
-
 local function does_multi_return(expr)
     local k = expr.kind
     return k == "CallExpression" or k == "SendExpression" or k == "Vararg"

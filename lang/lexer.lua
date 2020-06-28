@@ -77,11 +77,6 @@ local function byte(ls, n)
     return strsub(ls.data, k, k)
 end
 
-local function skip(ls, n)
-    ls.n = ls.n - n
-    ls.p = ls.p + n
-end
-
 local function pop(ls)
     local k = ls.p
     local c = strsub(ls.data, k, k)
@@ -325,8 +320,7 @@ local function read_escape_char(ls)
     elseif c == '\\' or c == '\"' or c == '\'' then
         save(ls, c)
         nextchar(ls)
-    elseif c == END_OF_STREAM then
-    else
+    elseif c ~= END_OF_STREAM then
         if not char_isdigit(c) then
             lex_error(ls, 'TK_string', "invalid escape sequence")
         end
