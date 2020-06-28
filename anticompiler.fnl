@@ -134,9 +134,10 @@
           binding
           (unpack (map body compile)))))
 
-(fn tset* [compile left right-out]
+(fn tset* [compile left right-out ast]
   (when (< 1 (# left))
-    (error "Unsupported form; tset cannot set multiple values."))
+    (error (.. "Unsupported form; tset cannot set multiple values on line "
+               ast.line)))
   (list (sym :tset)
         (compile (. left 1 :object))
         ;; and computed?
@@ -146,12 +147,13 @@
             (compile (. left 1 :property)))
         right-out))
 
-(fn assignment [compile {: left : right}]
+(fn assignment [compile ast]
+  (local {: left : right} ast)
   (let [right-out (if (= 1 (# right))
                       (compile (. right 1))
                       (list (sym :values) (unpack (map right compile))))]
     (if (any-computed? (. left 1))
-        (tset* compile left right-out)
+        (tset* compile left right-out ast)
         (list (sym :set-forcibly!)
               (if (= 1 (# left))
                   (compile (. left 1))
@@ -190,8 +192,8 @@
 (fn break [compile ast]
   (list (sym :lua) :break))
 
-(fn unsupported [{: kind}]
-  (error (.. kind " is not supported.")))
+(fn unsupported [ast]
+  (error (.. ast.kind " is not supported on line " ast.line)))
 
 (fn compile [ast tail?]
   (when (os.getenv "DEBUG") (print ast.kind))
