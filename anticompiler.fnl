@@ -135,11 +135,13 @@
           (unpack (map body compile)))))
 
 (fn tset* [compile left right-out]
-  (when (and (. left 1 :computed) (< 1 (# left)))
+  (when (< 1 (# left))
     (error "Unsupported form; tset cannot set multiple values."))
   (list (sym :tset)
         (compile (. left 1 :object))
-        (if (= (. left 1 :property :kind) "Identifier")
+        ;; and computed?
+        (if (and (not (. left 1 :computed))
+                 (= (. left 1 :property :kind) "Identifier"))
             (. left 1 :property :name)
             (compile (. left 1 :property)))
         right-out))

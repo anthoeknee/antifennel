@@ -18,7 +18,9 @@ antifennel: antifennel.fnl anticompiler.fnl $(PARSER_FENNEL)
 	chmod 755 $@
 
 test: antifennel self
-	diff antifennel.fnl antifennel_expected.fnl
+	@diff antifennel.fnl antifennel_expected.fnl
+	@luajit antifennel.lua test.lua > test.fnl
+	@diff test.fnl test_expected.fnl
 
 antifennel.fnl: antifennel.lua
 	luajit antifennel.lua antifennel.lua > antifennel.fnl
