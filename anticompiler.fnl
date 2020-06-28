@@ -87,10 +87,15 @@
         method.name
         (unpack (map arguments compile))))
 
-(fn member [compile {: object : property : computed}]
-  (if computed
-      (list (sym ".") (compile object) (compile property))
-      (sym (.. (tostring (compile object)) "." property.name))))
+(fn member [compile ast]
+  (fn any-computed? [ast]
+    (or ast.computed (and ast.object (any-computed? ast.object))))
+  ;; this could be collapsed into a single dot call since those go nested
+  (if (any-computed? ast)
+      (list (sym ".") (compile ast.object) (if ast.computed
+                                               (compile ast.property)
+                                               (view (compile ast.property))))
+      (sym (.. (tostring (compile ast.object)) "." ast.property.name))))
 
 (fn if* [compile {: tests : cons : alternate} tail?]
   (each [_ v (ipairs cons)]
