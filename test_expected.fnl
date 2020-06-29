@@ -10,3 +10,5 @@
 
 (: string "match" "abc")
 
+(print (.. (or base "") "_" append "_"))
+

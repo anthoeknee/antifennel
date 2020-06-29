@@ -123,8 +123,7 @@
 
 (fn concat [compile {: terms}]
   (list (sym "..")
-        (compile (. terms 1))
-        (compile (. terms 2))))
+        (unpack (map terms compile))))
 
 (fn each* [compile {: namelist : explist : body}]
   (let [binding (map namelist.names compile)]
