@@ -136,7 +136,7 @@
 (fn tset* [compile left right-out ast]
   (when (< 1 (# left))
     (error (.. "Unsupported form; tset cannot set multiple values on line "
-               ast.line)))
+               (or ast.line "?"))))
   (list (sym :tset)
         (compile (. left 1 :object))
         ;; and computed?
@@ -192,7 +192,8 @@
   (list (sym :lua) :break))
 
 (fn unsupported [ast]
-  (error (.. ast.kind " is not supported on line " ast.line)))
+  (when (os.getenv "DEBUG") (p ast))
+  (error (.. ast.kind " is not supported on line " (or ast.line "?"))))
 
 (fn compile [ast tail?]
   (when (os.getenv "DEBUG") (print ast.kind))
