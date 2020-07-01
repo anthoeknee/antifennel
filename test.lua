@@ -7,3 +7,5 @@ ids[k] = ast:var_declare(vlist[k])
 string:match("abc")
 
 print((base or '') .. '_' .. append .. '_')
+
+return (attributes(path) or {}).mode

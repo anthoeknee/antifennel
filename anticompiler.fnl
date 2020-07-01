@@ -88,7 +88,11 @@
         (unpack (map arguments compile))))
 
 (fn any-computed? [ast]
-  (or ast.computed (and ast.object (any-computed? ast.object))))
+  (or ast.computed (and ast.object
+                        (not= ast.object.kind :Identifier)
+                        (if (= ast.object.kind :MemberExpression)
+                            (any-computed? ast.object)
+                            true))))
 
 (fn member [compile ast]
   ;; this could be collapsed into a single dot call since those go nested
@@ -211,6 +215,7 @@
     "SendExpression" (send compile ast)
     "MemberExpression" (member compile ast)
     "UnaryExpression" (unary compile ast)
+    "ExpressionValue" (compile ast.value)
     "ExpressionStatement" (compile ast.expression)
 
     "IfStatement" (if* compile ast tail?)

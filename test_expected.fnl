@@ -12,3 +12,5 @@
 
 (print (.. (or base "") "_" append "_"))
 
+(. (or (attributes path) []) "mode")
+
