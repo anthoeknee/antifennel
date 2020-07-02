@@ -19,7 +19,7 @@ local function compile(rdr, filename)
    local ls = lex_setup(rdr, filename)
    local ast_builder = lua_ast.New()
    local ast_tree = parse(ast_builder, ls)
-   return compiler(ast_tree, filename)
+   return compiler(nil, ast_tree)
 end
 
 local filename = arg[1]

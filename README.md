@@ -24,11 +24,7 @@ The Antifennel compiler assumes its input file is valid Lua; it does
 not attempt to give good error messages when provided with files that
 won't parse.
 
-Antifennel assumes all locals are vars, even if they are not modified.
-
-All assignments use `set-forcibly!` even when regular `set` would do
-the trick, because we don't track the difference between locals that
-come from `var` vs function parameters.
+Antifennel will always use `local` even in cases where `let` would be better.
 
 ## Inherent Limitations
 

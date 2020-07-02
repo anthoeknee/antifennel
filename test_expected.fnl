@@ -4,13 +4,21 @@
 
 (tset scope.symmeta 1 true)
 
-(set-forcibly! foo bar)
+(global foo bar)
 
 (tset ids k (: ast "var_declare" (. vlist k)))
 
 (: string "match" "abc")
 
 (print (.. (or base "") "_" append "_"))
+
+(fn f [x y]
+  (var (z zz) (values 9 8))
+  (local b 99)
+  (set-forcibly! x 5)
+  (set z 0)
+  (global a 1)
+  (set y.y false))
 
 (. (or (attributes path) []) "mode")
 
