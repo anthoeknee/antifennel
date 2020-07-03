@@ -8,7 +8,7 @@ string:match("abc")
 
 print((base or '') .. '_' .. append .. '_')
 
-local function f(x, y)
+local f = function(x, y)
    local z,zz = 9,8 -- mutable local, immutable local
    local b = 99 -- immutable local
    x = 5 -- changing function params
@@ -16,5 +16,7 @@ local function f(x, y)
    a = 1 -- setting a global
    y.y = false -- table setter
 end
+
+f = 59
 
 return (attributes(path) or {}).mode

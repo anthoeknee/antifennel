@@ -33,16 +33,24 @@
             (function compile scope ast))))
 
 (fn local-declaration [compile scope {: names : expressions}]
-  (let [local-sym (sym :local)]
-    (add-to-scope scope :local (map names #$.name) local-sym)
-    (list local-sym
-          (if (= 1 (# names))
-              (sym (. names 1 :name))
-              (list (unpack (map names (partial compile scope)))))
-          (if (= 1 (# expressions))
-              (compile scope (. expressions 1))
-              (list (sym :values) (unpack (map expressions
-                                               (partial compile scope))))))))
+  (if (and (= (# expressions) (# names) 1)
+           (= :FunctionExpression (. expressions 1 :kind)))
+      ;; check for local f = funnction declaration; compile that to (fn f []...)
+      (do (add-to-scope scope :function [(. names 1 :name)])
+          (declare-function compile scope (doto (. expressions 1)
+                                            (tset :id (. names 1))
+                                            (tset :locald true))))
+      (let [local-sym (sym :local)]
+        (add-to-scope scope :local (map names #$.name) local-sym)
+        (list local-sym
+              (if (= 1 (# names))
+                  (sym (. names 1 :name))
+                  (list (unpack (map names (partial compile scope)))))
+              (if (= 1 (# expressions))
+                  (compile scope (. expressions 1))
+                  (list (sym :values)
+                        (unpack (map expressions
+                                     (partial compile scope)))))))))
 
 (fn vals [compile scope {: arguments}]
   (if (= 1 (# arguments))
@@ -174,6 +182,7 @@
       [:local] (do (map names (partial varize-local! scope))
                    :set)
       [:MemberExpression] :set
+      [:function] :set-forcibly!
       [:param] :set-forcibly!
       _ :global)))
 

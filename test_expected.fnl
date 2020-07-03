@@ -20,5 +20,7 @@
   (global a 1)
   (set y.y false))
 
+(set-forcibly! f 59)
+
 (. (or (attributes path) []) "mode")
 
