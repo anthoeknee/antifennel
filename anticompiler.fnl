@@ -216,9 +216,11 @@
                                       (list (sym :lua) :break)))))))
 
 (fn for* [compile scope {: init : last : step : body}]
-  (let [subscope (make-scope scope)]
+  (let [i (compile scope init.id)
+        subscope (make-scope scope)]
+    (add-to-scope subscope :param [i])
     (list (sym :for)
-          [(compile scope init.id) (compile scope init.value) (compile scope last)
+          [i (compile scope init.value) (compile scope last)
            (and step (compile scope step))]
           (unpack (map body (partial compile subscope))))))
 

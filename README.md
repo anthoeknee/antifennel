@@ -9,7 +9,7 @@ no problems.
 ## Usage
 
     $ make
-    $ antifennel targetfile.lua > targetfile.fnl
+    $ ./antifennel targetfile.lua > targetfile.fnl
 
 The `antifennel` script is self-contained and can be moved or
 symlinked onto your `$PATH`; all it requires to run is LuaJIT.
@@ -18,7 +18,7 @@ Or during development, run without building:
 
     $ luajit antifennel.lua targetfile.lua > targetfile.fnl
 
-## Current limitations
+## Limitations
 
 Requires LuaJIT.
 
@@ -28,9 +28,7 @@ won't parse.
 
 Antifennel will always use `local` even in cases where `let` would be better.
 
-## Inherent Limitations
-
-Fennel code does not support `goto`.
+Fennel code does not support `goto`, so neither does Antifennel.
 
 Early returns will compile to very ugly Fennel code, but they should
 be correct.
