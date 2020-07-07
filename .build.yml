@@ -1,0 +1,7 @@
+image: debian/buster
+packages:
+  - luajit
+  - make
+  - git
+tasks:
+- test: make -C antifennel ci
