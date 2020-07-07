@@ -12,7 +12,7 @@
 (fn test-cli []
   ;; skip this if we haven't compiled the CLI
   (when (file-exists? "fennel")
-    (l.assertEquals "6\n" (: (io.popen "./fennel --eval \"(+ 1 2 3)\"")
+    (l.assertEquals "6\n" (: (io.popen "luajit fennel --eval \"(+ 1 2 3)\"")
                              :read :*a))))
 
 {: test-cli}
