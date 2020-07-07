@@ -10,6 +10,9 @@
 
 (: string "match" "abc")
 
+(each [k v (pairs {:a 1})]
+  (set-forcibly! k "c"))
+
 (print (.. (or base "") "_" append "_"))
 
 (fn f [x y]

@@ -6,6 +6,8 @@ ids[k] = ast:var_declare(vlist[k])
 
 string:match("abc")
 
+for k,v in pairs({a=1}) do k="c" end
+
 print((base or '') .. '_' .. append .. '_')
 
 local f = function(x, y)

@@ -17,10 +17,19 @@ antifennel: antifennel.fnl anticompiler.fnl $(PARSER_FENNEL)
 	./fennel --require-as-include --compile $< >> $@
 	chmod 755 $@
 
-test: antifennel self
-	@diff -u antifennel.fnl antifennel_expected.fnl
+test: antifennel self test/fennel.lua
+	diff -u antifennel.fnl antifennel_expected.fnl
 	@luajit antifennel.lua test.lua > test.fnl
-	@diff -u test.fnl test_expected.fnl
+	diff -u test.fnl test_expected.fnl
+	luajit test/init.lua
+
+# Run antifennel on Fennel's own written-in-Lua compiler and then run the full
+# test suite using the results after compiling it back to Lua.
+# We have to make one concession in the normal Fennel-in-Lua compiler: all the
+# locals set at the top are edited to use _G.foo instead of foo in order to
+# appease Fennel's own compiler. Other than that it's purely stock (rev 180b455)
+test/fennel.lua: fennel.lua anticompiler.fnl
+	luajit antifennel.lua fennel.lua | fennel --compile - > $@
 
 antifennel.fnl: antifennel.lua
 	luajit antifennel.lua antifennel.lua > antifennel.fnl
@@ -32,4 +41,6 @@ lang/%.fnl: lang/%.lua anticompiler.fnl
 
 clean: ; rm -f lang/*.fnl antifennel.fnl antifennel
 
-.PHONY: test self clean
+ci: test
+
+.PHONY: test self clean ci

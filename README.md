@@ -20,6 +20,8 @@ Or during development, run without building:
 
 ## Current limitations
 
+Requires LuaJIT.
+
 The Antifennel compiler assumes its input file is valid Lua; it does
 not attempt to give good error messages when provided with files that
 won't parse.
@@ -50,6 +52,11 @@ assignment in Fennel.
 
 Send patches directly to the maintainer or the
 [Fennel mailing list](https://lists.sr.ht/%7Etechnomancy/fennel)
+
+## TODO
+
+* Move reserved-fennel-keyword calculating logic out of the parser
+* Add support for Lua 5.3
 
 ## Copyright
 

@@ -1,5 +1,5 @@
 --[[
-Copyright (c) 2016-2019 Calvin Rose and contributors
+Copyright (c) 2016-2020 Calvin Rose and contributors
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
 the Software without restriction, including without limitation the rights to
@@ -17,14 +17,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ]]
 
 -- Make global variables local.
-local setmetatable = setmetatable
-local getmetatable = getmetatable
-local type = type
-local assert = assert
-local pairs = pairs
-local ipairs = ipairs
-local tostring = tostring
-local unpack = unpack or table.unpack
+local setmetatable = _G.setmetatable
+local getmetatable = _G.getmetatable
+local type = _G.type
+local assert = _G.assert
+local pairs = _G.pairs
+local ipairs = _G.ipairs
+local tostring = _G.tostring
+local unpack = _G.unpack or table.unpack
 
 --
 -- Main Types and support functions
@@ -242,6 +242,19 @@ local utils = (function()
 
     local function isQuoted(symbol) return symbol.quoted end
 
+    -- Walks a tree (like the AST), invoking f(node, idx, parent) on each node.
+    -- When f returns a truthy value, recursively walks the children.
+    local walkTree = function(root, f, customIterator)
+        local function walk(iterfn, parent, idx, node)
+            if f(idx, node, parent) then
+                for k, v in iterfn(node) do walk(iterfn, node, k, v) end
+            end
+        end
+
+        walk(customIterator or pairs, nil, nil, root)
+        return root
+    end
+
     local luaKeywords = {
         'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for',
         'function', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat', 'return',
@@ -287,7 +300,7 @@ local utils = (function()
     return {
         -- basic general table functions:
         stablepairs=stablepairs, allpairs=allpairs, map=map, kvmap=kvmap,
-        copy=copy,
+        copy=copy, walkTree=walkTree,
 
         -- AST functions:
         list=list, sym=sym, sequence=sequence, expr=expr, varg=varg,
@@ -593,7 +606,7 @@ local parser = (function()
                                     parseError("can't start multisym segment " ..
                                                    "with a digit: ".. rawstr)
                                 elseif(rawstr:match("[%.:][%.:]") and
-                                       rawstr ~= "..") then
+                                       rawstr ~= ".." and rawstr ~= '$...') then
                                     byteindex = (byteindex - #rawstr +
                                                      rawstr:find("[%.:][%.:]") + 1)
                                     parseError("malformed multisym: " .. rawstr)
@@ -1338,15 +1351,26 @@ local compiler = (function()
             local init = table.concat(inits, ', ')
             local lvalue = table.concat(lvalues, ', ')
 
-            local plen = #parent
+            local plen, plast = #parent, parent[#parent]
             local ret = compile1(from, scope, parent, {target = lvalue})
             if declaration then
+                -- A single leaf emitted at the end of the parent chunk means
+                -- a simple assignment a = x was emitted, and we can just
+                -- splice "local " onto the front of it. However, we can't
+                -- just check based on plen, because some forms (such as
+                -- include) insert new chunks at the top of the parent chunk
+                -- rather than just at the end; this loop checks for this
+                -- occurance and updates plen to be the index of the last
+                -- thing in the parent before compiling the new value.
+                for pi = plen, #parent do
+                    if parent[pi] == plast then plen = pi end
+                end
                 if #parent == plen + 1 and parent[#parent].leaf then
-                    -- A single leaf emitted means an simple assignment a = x was emitted
                     parent[#parent].leaf = 'local ' .. parent[#parent].leaf
                 else
-                    table.insert(parent, plen + 1, { leaf = 'local ' .. lvalue ..
-                                                         ' = ' .. init, ast = ast})
+                    table.insert(parent, plen + 1,
+                                 { leaf = 'local ' .. lvalue .. ' = ' .. init,
+                                   ast = ast})
                 end
             end
             return ret
@@ -1622,6 +1646,7 @@ local compiler = (function()
         -- compiling functions:
         compileString=compileString, compileStream=compileStream,
         compile=compile, compile1=compile1, emit=emit, destructure=destructure,
+        requireInclude=requireInclude,
 
         -- AST functions:
         gensym=gensym, autogensym=autogensym, doQuote=doQuote,
@@ -2346,17 +2371,32 @@ local specials = (function()
         fScope.hashfn = true
         local args = {}
         for i = 1, 9 do args[i] = compiler.declareLocal(utils.sym('$' .. i), {}, fScope, ast) end
+        -- recursively walk the AST, transforming $... into ...
+        utils.walkTree(ast[2], function(idx, node, parentNode)
+            if utils.isSym(node) and utils.deref(node) == '$...' then
+                parentNode[idx] = utils.varg()
+                fScope.vararg = true
+            else -- truthy return value determines whether to traverse children
+                return utils.isList(node) or utils.isTable(node)
+            end
+        end)
         -- Compile body
         compiler.compile1(ast[2], fScope, fChunk, {tail = true})
         local maxUsed = 0
         for i = 1, 9 do if fScope.symmeta['$' .. i].used then maxUsed = i end end
+        if fScope.vararg then
+            compiler.assert(maxUsed == 0, '$ and $... in hashfn are mutually exclusive', ast)
+            args = {utils.deref(utils.varg())}
+            maxUsed = 1
+        end
         local argStr = table.concat(args, ', ', 1, maxUsed)
         compiler.emit(parent, ('local function %s(%s)'):format(name, argStr), ast)
         compiler.emit(parent, fChunk, ast)
         compiler.emit(parent, 'end', ast)
         return utils.expr(name, 'sym')
     end
-    docSpecial("hashfn", {"..."}, "Function literal shorthand; args are $1, $2, etc.")
+    docSpecial("hashfn", {"..."},
+               "Function literal shorthand; args are either $... OR $1, $2, etc.")
 
     local function defineArithmeticSpecial(name, zeroArity, unaryPrefix, luaName)
         local paddedOp = ' ' .. (luaName or name) .. ' '
@@ -2735,9 +2775,6 @@ end
 -- to do this. For now stash it in the compiler table, but we should untangle it
 compiler.dofileFennel = function(filename, options, ...)
     local opts = utils.copy(options)
-    if opts.allowedGlobals == nil then
-        opts.allowedGlobals = specials.currentGlobalNames(opts.env)
-    end
     local f = assert(io.open(filename, "rb"))
     local source = f:read("*all")
     f:close()
@@ -2769,6 +2806,7 @@ local module = {
 
     loadCode = specials.loadCode,
     macroLoaded = specials.macroLoaded,
+    searchModule = specials.searchModule,
     doc = specials.doc,
 
     eval = eval,
@@ -2932,8 +2970,6 @@ module.repl = function(options)
                         map = utils.map }
     return eval(replsource, { correlate = true }, module, internals)(options)
 end
-
-module.searchModule = specials.searchModule
 
 module.makeSearcher = function(options)
     return function(modulename)
