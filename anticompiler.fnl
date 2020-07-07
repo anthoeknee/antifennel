@@ -152,6 +152,7 @@
 (fn each* [compile scope {: namelist : explist : body}]
   (let [subscope (make-scope scope)
         binding (map namelist.names (partial compile scope))]
+    (add-to-scope subscope :param binding)
     (each [_ form (ipairs (map explist (partial compile scope)))]
       (table.insert binding form))
     (list (sym :each)
