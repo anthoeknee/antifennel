@@ -18,9 +18,41 @@
 
 (local fnlfmt (require "fnlfmt"))
 
+(local reservedFennel {:band true
+                       :bnot true
+                       :bor true
+                       :bxor true
+                       :doc true
+                       :doto true
+                       :each true
+                       :fn true
+                       :global true
+                       :hashfn true
+                       :lambda true
+                       :let true
+                       :lshift true
+                       :lua true
+                       :macro true
+                       :macrodebug true
+                       :macroexpand true
+                       :macros true
+                       :match true
+                       :partial true
+                       :rshift true
+                       :set true
+                       :tset true
+                       :values true
+                       :var true
+                       :when true})
+
+(fn mangle [name field]
+  (when (and (not field) (. reservedFennel name))
+    (set-forcibly! name (.. "___" name "___")))
+  name)
+
 (fn compile [rdr filename]
   (local ls (lex_setup rdr filename))
-  (local ast_builder (lua_ast.New))
+  (local ast_builder (lua_ast.New mangle))
   (local ast_tree (parse ast_builder ls))
   (compiler nil ast_tree))
 

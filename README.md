@@ -53,7 +53,6 @@ Send patches directly to the maintainer or the
 
 ## TODO
 
-* Move reserved-fennel-keyword calculating logic out of the parser
 * Add support for Lua 5.3
 
 ## Copyright

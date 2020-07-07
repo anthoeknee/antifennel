@@ -5,16 +5,8 @@ local function build(kind, node)
     return node
 end
 
-local reservedFennel = {['doc']=true, ['lua']=true, ['hashfn']=true,
-   ['macro']=true, ['macros']=true, ['macroexpand']=true, ['macrodebug']=true,
-   ['values']=true, ['when']=true, ['each']=true, ['fn']=true, ['lambda']=true,
-   ['partial']=true, ['set']=true, ['global']=true, ['var']=true, ['let']=true,
-   ['tset']=true, ['doto']=true, ['match']=true, ['rshift']=true,
-   ['lshift']=true, ['bor']=true, ['band']=true, ['bnot']=true, ['bxor']=true}
-
-local function ident(name, line, field)
-    if not field and reservedFennel[name] then name = "___" .. name .. "___" end
-    return build("Identifier", { name = name, line = line })
+local function ident(ast, name, line, field)
+    return build("Identifier", { name = ast.mangle(name, field), line = line })
 end
 
 local function does_multi_return(expr)
@@ -86,7 +78,7 @@ function AST.expr_index(ast, v, index, line)
 end
 
 function AST.expr_property(ast, v, prop, line)
-    local index = ident(prop, line, true)
+    local index = ident(ast, prop, line, true)
     return build("MemberExpression", { object = v, property = index, computed = false, line = line })
 end
 
@@ -146,11 +138,11 @@ function AST.expr_binop(ast, op, expa, expb, line)
 end
 
 function AST.identifier(ast, name)
-    return ident(name)
+    return ident(ast, name)
 end
 
 function AST.expr_method_call(ast, v, key, args, line)
-    local m = ident(key, nil, true)
+    local m = ident(ast, key, nil, true)
     return build("SendExpression", { receiver = v, method = m, arguments = args, line = line })
 end
 
@@ -205,7 +197,7 @@ function AST.goto_stmt(ast, name, line)
 end
 
 function AST.var_declare(ast, name)
-    local id = ident(name)
+    local id = ident(ast, name)
     ast.variables:declare(name)
     return id
 end
@@ -265,10 +257,14 @@ local function new_variables_registry(create, match)
     return { declare = declare, scope_enter = scope_enter, scope_exit = scope_exit, lookup = lookup }
 end
 
-local function new_ast()
+local function default_mangle(name) return name end
+
+local function new_ast(mangle)
     local match_id_name = function(id, name) return id.name == name end
-    local vars = new_variables_registry(ident, match_id_name)
-    return setmetatable({ variables = vars }, ASTClass)
+    local ast = { mangle = mangle or default_mangle }
+    local create = function(...) return ident(ast, ...) end
+    ast.variables = new_variables_registry(create, match_id_name)
+    return setmetatable(ast, ASTClass)
 end
 
 return { New = new_ast }
