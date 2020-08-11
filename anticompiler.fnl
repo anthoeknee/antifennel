@@ -48,6 +48,8 @@
                   (list (unpack (map names (partial compile scope)))))
               (if (= 1 (# expressions))
                   (compile scope (. expressions 1))
+                  (= 0 (# expressions))
+                  (sym :nil)
                   (list (sym :values)
                         (unpack (map expressions
                                      (partial compile scope)))))))))
@@ -55,6 +57,8 @@
 (fn vals [compile scope {: arguments}]
   (if (= 1 (# arguments))
       (compile scope (. arguments 1))
+      (= 0 (# arguments))
+      (sym :nil)
       (list (sym :values) (unpack (map arguments (partial compile scope))))))
 
 (fn any-complex-expressions? [args i]
@@ -188,9 +192,11 @@
       _ :global)))
 
 (fn assignment [compile scope ast]
-  (local {: left : right} ast)
-  (let [right-out (if (= 1 (# right))
+  (let [{: left : right} ast
+        right-out (if (= 1 (# right))
                       (compile scope (. right 1))
+                      (= 0 (# right))
+                      (sym :nil)
                       (list (sym :values)
                             (unpack (map right (partial compile scope)))))]
     (if (any-computed? (. left 1))
