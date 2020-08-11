@@ -3,8 +3,8 @@
 Turn Lua code into Fennel code. Does the opposite of what the Fennel
 compiler does.
 
-Somewhat immature, but it works on the 2250-line Fennel compiler with
-no problems.
+Somewhat immature, but it works on the 2250-line (pre-selfhosted)
+Fennel compiler with no problems.
 
 ## Usage
 
@@ -27,6 +27,8 @@ not attempt to give good error messages when provided with files that
 won't parse.
 
 Antifennel will always use `local` even in cases where `let` would be better.
+
+Antifennel will not emit variadic operators.
 
 Fennel code does not support `goto`, so neither does Antifennel.
 
@@ -53,7 +55,7 @@ Send patches directly to the maintainer or the
 
 ## TODO
 
-* Add support for Lua 5.3
+* Add support for non-LuaJIT
 
 ## Copyright
 

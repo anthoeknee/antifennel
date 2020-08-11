@@ -29,7 +29,7 @@ test: antifennel self test/fennel.lua
 # locals set at the top are edited to use _G.foo instead of foo in order to
 # appease Fennel's own compiler. Other than that it's purely stock (rev 180b455)
 test/fennel.lua: fennel.lua anticompiler.fnl
-	luajit antifennel.lua fennel.lua | fennel --compile - > $@
+	luajit antifennel.lua fennel.lua | ./fennel --compile - > $@
 
 antifennel.fnl: antifennel.lua
 	luajit antifennel.lua antifennel.lua > antifennel.fnl

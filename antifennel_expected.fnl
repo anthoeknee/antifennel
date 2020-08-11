@@ -6,11 +6,11 @@
     (table.insert (or package.loaders package.searchers) 1 searcher)
     (table.insert (or package.loaders package.searchers) searcher))
 
-(local lex_setup (require "lang.lexer"))
+(local lex-setup (require "lang.lexer"))
 
 (local parse (require "lang.parser"))
 
-(local lua_ast (require "lang.lua_ast"))
+(local lua-ast (require "lang.lua_ast"))
 
 (local reader (require "lang.reader"))
 
@@ -18,43 +18,48 @@
 
 (local fnlfmt (require "fnlfmt"))
 
-(local reservedFennel {:band true
-                       :bnot true
-                       :bor true
-                       :bxor true
-                       :doc true
-                       :doto true
-                       :each true
-                       :fn true
-                       :global true
-                       :hashfn true
-                       :lambda true
-                       :let true
-                       :lshift true
-                       :lua true
-                       :macro true
-                       :macrodebug true
-                       :macroexpand true
-                       :macros true
-                       :match true
-                       :partial true
-                       :rshift true
-                       :set true
-                       :tset true
-                       :values true
-                       :var true
-                       :when true})
+(local reserved-fennel {:band true
+                        :bnot true
+                        :bor true
+                        :bxor true
+                        :doc true
+                        :doto true
+                        :each true
+                        :fn true
+                        :global true
+                        :hashfn true
+                        :lambda true
+                        :let true
+                        :lshift true
+                        :lua true
+                        :macro true
+                        :macrodebug true
+                        :macroexpand true
+                        :macros true
+                        :match true
+                        :partial true
+                        :rshift true
+                        :set true
+                        :tset true
+                        :values true
+                        :var true
+                        :when true})
+
+(fn uncamelize [name]
+  (fn splicedash [pre cap]
+    (.. pre "-" (: cap "lower")))
+  (: name "gsub" "([a-z0-9])([A-Z])" splicedash))
 
 (fn mangle [name field]
-  (when (and (not field) (. reservedFennel name))
+  (when (and (not field) (. reserved-fennel name))
     (set-forcibly! name (.. "___" name "___")))
-  name)
+  (or (and field name) (: (uncamelize name) "gsub" "([a-z0-9])_" "%1-")))
 
 (fn compile [rdr filename]
-  (local ls (lex_setup rdr filename))
-  (local ast_builder (lua_ast.New mangle))
-  (local ast_tree (parse ast_builder ls))
-  (compiler nil ast_tree))
+  (local ls (lex-setup rdr filename))
+  (local ast-builder (lua-ast.New mangle))
+  (local ast-tree (parse ast-builder ls))
+  (compiler nil ast-tree))
 
 (local filename (. arg 1))
 

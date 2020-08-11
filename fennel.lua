@@ -860,9 +860,9 @@ local compiler = (function()
     local function checkBindingValid(symbol, scope, ast)
         -- Check if symbol will be over shadowed by special
         local name = symbol[1]
-        assertCompile(not scope.specials[name] and not scope.macros[name],
-                      ("local %s was overshadowed by a special form or macro")
-                          :format(name), ast)
+        -- assertCompile(not scope.specials[name] and not scope.macros[name],
+        --               ("local %s was overshadowed by a special form or macro")
+        --                   :format(name), ast)
         assertCompile(not utils.isQuoted(symbol),
                       ("macro tried to bind %s without gensym"):format(name), symbol)
 

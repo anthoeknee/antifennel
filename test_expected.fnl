@@ -8,6 +8,8 @@
 
 (tset ids k (: ast "var_declare" (. vlist k)))
 
+(global SCREAMING_SNAKE true)
+
 (: string "match" "abc")
 
 (each [k v (pairs {:a 1})]

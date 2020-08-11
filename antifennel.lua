@@ -22,9 +22,14 @@ local reservedFennel = {['doc']=true, ['lua']=true, ['hashfn']=true,
    ['tset']=true, ['doto']=true, ['match']=true, ['rshift']=true,
    ['lshift']=true, ['bor']=true, ['band']=true, ['bnot']=true, ['bxor']=true}
 
+local function uncamelize(name)
+   local function splicedash(pre, cap) return pre .. "-" .. cap:lower() end
+   return name:gsub("([a-z0-9])([A-Z])", splicedash)
+end
+
 local function mangle(name, field)
    if not field and reservedFennel[name] then name = "___" .. name .. "___" end
-   return name
+   return field and name or uncamelize(name):gsub("([a-z0-9])_", "%1-")
 end
 
 local function compile(rdr, filename)

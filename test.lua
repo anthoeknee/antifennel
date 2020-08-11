@@ -4,6 +4,8 @@ scope.symmeta[1] = true
 foo=bar
 ids[k] = ast:var_declare(vlist[k])
 
+SCREAMING_SNAKE = true
+
 string:match("abc")
 
 for k,v in pairs({a=1}) do k="c" end
