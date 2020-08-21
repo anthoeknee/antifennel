@@ -29,18 +29,18 @@ When f returns a truthy value, recursively walks the children."
   (for [i (# fn-node) do-loc -1]
     (table.insert do-node 2 (table.remove fn-node i))))
 
-(fn transform [node]
-  (when (= :do (tostring (. node 1)))
-    (let [bindings []]
-      (table.insert node 2 bindings)
-      (tset node 1 (fennel.sym :let))
-      (locals-to-bindings node bindings)))
-  (when (= :fn (tostring (. node 1)))
-    (let [has-name? (fennel.sym? (. node 2))
-          do-loc (if has-name? 4 3)
-          do-node (fennel.list (fennel.sym :do))]
-      (move-body node do-node do-loc)
-      (table.insert node do-loc do-node))))
+(fn transform-do [node]
+  (let [bindings []]
+    (table.insert node 2 bindings)
+    (tset node 1 (fennel.sym :let))
+    (locals-to-bindings node bindings)))
+
+(fn transform-fn [node]
+  (let [has-name? (fennel.sym? (. node 2))
+        do-loc (if has-name? 4 3)
+        do-node (fennel.list (fennel.sym :do))]
+    (move-body node do-node do-loc)
+    (table.insert node do-loc do-node)))
 
 (fn do-local-node? [node]
   (and (= :table (type node)) (= :do (tostring (. node 1)))
@@ -52,8 +52,10 @@ When f returns a truthy value, recursively walks the children."
            (and (= :table (type (. node 4))) (= :local (tostring (. node 4 1)))))))
 
 (fn letter [idx node]
-  (when (or (do-local-node? node) (fn-local-node? node))
-    (transform node))
+  (when (do-local-node? node)
+    (transform-do node))
+  (when (fn-local-node? node)
+    (transform-fn node))
   (= :table (type node)))
 
 (fn reverse-ipairs [t] ;; based on lume.ripairs
