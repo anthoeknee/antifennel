@@ -23,4 +23,18 @@ end
 
 f = 59
 
+do
+   local boo, twenty = "hoo", 20
+   local fifteen = 15
+   print(boo, twenty+fifteen)
+end
+
+local letter = function()
+   local x = 19
+   local y = 20
+   return x+y
+end
+
+print((function() local x = 1 return x end)())
+
 return (attributes(path) or {}).mode

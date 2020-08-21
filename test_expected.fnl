@@ -27,5 +27,16 @@
 
 (set-forcibly! f 59)
 
+(let [(boo twenty) (values "hoo" 20) fifteen 15]
+  (print boo (+ twenty fifteen)))
+
+(fn letter []
+  (let [x 19 y 20]
+    (+ x y)))
+
+(print ((fn []
+          (let [x 1]
+            x))))
+
 (. (or (attributes path) []) "mode")
 

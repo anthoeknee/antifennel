@@ -13,6 +13,7 @@ local lua_ast = require('lang.lua_ast')
 local reader = require('lang.reader')
 
 local compiler = require('anticompiler')
+local letter = require("letter")
 local fnlfmt = require("fnlfmt")
 
 local reservedFennel = {['doc']=true, ['lua']=true, ['hashfn']=true,
@@ -36,7 +37,7 @@ local function compile(rdr, filename)
    local ls = lex_setup(rdr, filename)
    local ast_builder = lua_ast.New(mangle)
    local ast_tree = parse(ast_builder, ls)
-   return compiler(nil, ast_tree)
+   return letter(compiler(nil, ast_tree))
 end
 
 local filename = arg[1]

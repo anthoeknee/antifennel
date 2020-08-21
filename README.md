@@ -26,8 +26,6 @@ The Antifennel compiler assumes its input file is valid Lua; it does
 not attempt to give good error messages when provided with files that
 won't parse.
 
-Antifennel will always use `local` even in cases where `let` would be better.
-
 Antifennel will not emit variadic operators.
 
 Fennel code does not support `goto`, so neither does Antifennel.
@@ -35,8 +33,8 @@ Fennel code does not support `goto`, so neither does Antifennel.
 Early returns will compile to very ugly Fennel code, but they should
 be correct.
 
-Multiple values can be set, but only if the keys are static. For
-instance, this is OK:
+Multiple value assignment doesn't work if setting table keys that
+aren't static. For instance, this is OK:
 
     tbl.field1.q, x = "QUEUE", 13
 

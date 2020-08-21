@@ -16,6 +16,8 @@
 
 (local compiler (require "anticompiler"))
 
+(local letter (require "letter"))
+
 (local fnlfmt (require "fnlfmt"))
 
 (local reserved-fennel {:band true
@@ -59,7 +61,7 @@
   (local ls (lex-setup rdr filename))
   (local ast-builder (lua-ast.New mangle))
   (local ast-tree (parse ast-builder ls))
-  (compiler nil ast-tree))
+  (letter (compiler nil ast-tree)))
 
 (local filename (. arg 1))
 
