@@ -2693,7 +2693,7 @@ package.preload["fennel.utils"] = package.preload["fennel.utils"] or function(..
     walk((custom_iterator or pairs), nil, nil, root)
     return root
   end
-  local lua_keywords = {"and", "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"}
+  local lua_keywords = {"and", "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while", "goto"}
   for i, v in ipairs(lua_keywords) do
     lua_keywords[v] = i
   end

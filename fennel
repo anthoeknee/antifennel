@@ -761,7 +761,7 @@ package.preload["fennel"] = package.preload["fennel"] or function(...)
       local luaKeywords = {
           'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for',
           'function', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat', 'return',
-          'then', 'true', 'until', 'while'
+          'then', 'true', 'until', 'while', 'goto'
       }
   
       for i, v in ipairs(luaKeywords) do luaKeywords[v] = i end
