@@ -40,15 +40,25 @@ local function compile(rdr, filename)
    return letter(compiler(nil, ast_tree))
 end
 
-local filename = arg[1]
-local f = filename and io.open(filename)
-if f then
-   f:close()
-   for _,code in ipairs(compile(reader.file(filename), filename)) do
-      print(fnlfmt.fnlfmt(code))
+if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
+   local filename = arg[1]
+   local f = filename and io.open(filename)
+   if f then
+      f:close()
+      for _,code in ipairs(compile(reader.file(filename), filename)) do
+         print(fnlfmt.fnlfmt(code))
+      end
+   else
+      print(("Usage: %s LUA_FILENAME"):format(arg[0]))
+      print("Compiles LUA_FILENAME to Fennel and prints output.")
+      os.exit(1)
    end
 else
-   print(("Usage: %s LUA_FILENAME"):format(arg[0]))
-   print("Compiles LUA_FILENAME to Fennel and prints output.")
-   os.exit(1)
+   return function(str, source)
+      local out = {}
+      for _,code in ipairs(compile(reader.string(str), source or "*source")) do
+         table.insert(out, fnlfmt.fnlfmt(code))
+      end
+      return table.concat(out, "\n")
+   end
 end
