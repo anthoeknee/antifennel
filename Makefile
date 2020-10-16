@@ -41,6 +41,8 @@ lang/%.fnl: lang/%.lua anticompiler.fnl
 
 clean: ; rm -f lang/*.fnl antifennel.fnl antifennel
 
-ci: test
+ci: test count
+
+count: ; cloc $(PARSER_FENNEL) anticompiler.fnl antifennel.lua
 
 .PHONY: test self clean ci

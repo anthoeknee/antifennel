@@ -227,7 +227,7 @@
     (add-to-scope subscope :param [i])
     (list (sym :for)
           [i (compile scope init.value) (compile scope last)
-           (and step (compile scope step))]
+           (and step (not= step 1) (compile scope step))]
           (unpack (map body (partial compile subscope))))))
 
 (fn table* [compile scope {: keyvals}]
