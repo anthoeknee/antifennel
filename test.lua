@@ -8,6 +8,9 @@ SCREAMING_SNAKE = true
 
 string:match("abc")
 
+local t = {t2={f=function(x) return x end}}
+(t["t2"]):f()
+
 for k,v in pairs({a=1}) do k="c" end
 
 print((base or '') .. '_' .. append .. '_')

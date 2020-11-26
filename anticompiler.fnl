@@ -1,4 +1,4 @@
-(local {: list : sym} (require :fennel))
+(local {: list : sym : sym?} (require :fennel))
 (local view (require :fennelview))
 
 (fn map [tbl f with-last?]
@@ -101,10 +101,11 @@
   (list (compile scope callee) (unpack (map arguments (partial compile scope)))))
 
 (fn send [compile scope {: receiver : method : arguments}]
-  (list (sym ":")
-        (compile scope receiver)
-        method.name
-        (unpack (map arguments (partial compile scope)))))
+  (let [target (compile scope receiver)
+        args (map arguments (partial compile scope))]
+    (if (sym? target)
+        (list (sym (.. (tostring target) ":" method.name)) (unpack args))
+        (list (sym ":") target method.name (unpack args)))))
 
 (fn any-computed? [ast]
   (or ast.computed (and ast.object

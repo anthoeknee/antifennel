@@ -6,11 +6,16 @@
 
 (global foo bar)
 
-(tset ids k (: ast "var_declare" (. vlist k)))
+(tset ids k (ast:var_declare (. vlist k)))
 
 (global SCREAMING_SNAKE true)
 
-(: string "match" "abc")
+(string:match "abc")
+
+(local t {:t2 {:f (fn [x]
+                    x)}})
+
+(: (. t "t2") "f")
 
 (each [k v (pairs {:a 1})]
   (set-forcibly! k "c"))
