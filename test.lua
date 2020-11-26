@@ -37,4 +37,9 @@ end
 
 print((function() local x = 1 return x end)())
 
+local function f123(_1)
+   local _0 = "zero"
+   print(_0 .. _1)
+end
+
 return (attributes(path) or {}).mode

@@ -38,5 +38,9 @@
           (let [x 1]
             x))))
 
+(fn f123 [_1]
+  (let [_0 "zero"]
+    (print (.. _0 _1))))
+
 (. (or (attributes path) []) "mode")
 

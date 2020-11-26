@@ -1,9 +1,10 @@
-;; an assert-compile function which tries to show where the error occurred
-;; and what to do about it!
+;; This module contains functions that handle errors during parsing and
+;; compilation and attempt to enrich them by suggesting fixes.
+;; It can be disabled to fall back to the regular terse errors.
 
 (fn ast-source [ast]
   (let [m (getmetatable ast)]
-    (if (and m m.filename m.line m) m ast)))
+    (if (and m m.line m) m ast)))
 
 (local suggestions
        {"unexpected multi symbol (.*)"
@@ -11,7 +12,7 @@
 
         "use of global (.*) is aliased by a local"
         ["renaming local %s"
-         "refer to the global using _G.%s instead of %s"]
+         "refer to the global using _G.%s instead of directly"]
 
         "local (.*) was overshadowed by a special form or macro"
         ["renaming local %s"]
@@ -175,7 +176,7 @@
       (read-line-from-file filename line)))
 
 (fn friendly-msg [msg {: filename : line : bytestart : byteend} source]
-  (let [(ok codeline bol eol) (pcall read-line filename line source)
+  (let [(ok codeline bol) (pcall read-line filename line source)
         suggestions (suggest msg)
         out [msg ""]]
     ;; don't assume the file can be read as-is
@@ -196,7 +197,7 @@
     (table.concat out "\n")))
 
 (fn assert-compile [condition msg ast source]
-  "A drop-in replacement for the internal assertCompile with friendly messages."
+  "A drop-in replacement for the internal assert-compile with friendly messages."
   (when (not condition)
     (let [{: filename : line} (ast-source ast)]
       (error (friendly-msg (: "Compile error in %s:%s\n  %s" :format
@@ -207,7 +208,7 @@
   condition)
 
 (fn parse-error [msg filename line bytestart source]
-  "A drop-in replacement for the internal parseError with friendly messages."
+  "A drop-in replacement for the internal parse-error with friendly messages."
   (error (friendly-msg (: "Parse error in %s:%s\n  %s" :format filename line msg)
                        {: filename : line : bytestart} source) 0))
 

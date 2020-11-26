@@ -2,6 +2,7 @@
 
 ## 0.2.0 / ???
 
+* Upgrade to Fennel 0.7.0.
 * Use `let` where appropriate to replace `do+local` or directly inside `fn`.
 * Emit identifiers using kebab-case instead of camelCase or snake_case.
 * Compile `local f = function()` to `fn` idiomatically.
