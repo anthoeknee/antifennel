@@ -58,22 +58,23 @@
   (or (and field name) (: (uncamelize name) "gsub" "([a-z0-9])_" "%1-")))
 
 (fn compile [rdr filename]
-  (local ls (lex-setup rdr filename))
-  (local ast-builder (lua-ast.New mangle))
-  (local ast-tree (parse ast-builder ls))
-  (letter (compiler nil ast-tree)))
+  (let [ls (lex-setup rdr filename) ast-builder (lua-ast.New mangle) ast-tree (parse ast-builder ls)]
+    (letter (compiler nil ast-tree))))
 
-(local filename (. arg 1))
-
-(local f (and filename (io.open filename)))
-
-(if f
-    (do
-      (: f "close")
-      (each [_ code (ipairs (compile (reader.file filename) filename))]
-        (print (fnlfmt.fnlfmt code))))
-    (do
-      (print (: "Usage: %s LUA_FILENAME" "format" (. arg 0)))
-      (print "Compiles LUA_FILENAME to Fennel and prints output.")
-      (os.exit 1)))
+(if (and (and debug debug.getinfo) (= (debug.getinfo 3) nil))
+    (let [filename (. arg 1) f (and filename (io.open filename))]
+      (if f
+          (do
+            (: f "close")
+            (each [_ code (ipairs (compile (reader.file filename) filename))]
+              (print (fnlfmt.fnlfmt code))))
+          (do
+            (print (: "Usage: %s LUA_FILENAME" "format" (. arg 0)))
+            (print "Compiles LUA_FILENAME to Fennel and prints output.")
+            (os.exit 1))))
+    (fn [str source]
+      (let [out []]
+        (each [_ code (ipairs (compile (reader.string str) (or source "*source")))]
+          (table.insert out (fnlfmt.fnlfmt code)))
+        (table.concat out "\n"))))
 
