@@ -57,7 +57,7 @@ Send patches directly to the maintainer or the
 
 ## Copyright
 
-Copyright © 2020 Phil Hagelberg and contributors
+Copyright © 2020-2021 Phil Hagelberg and contributors
 Released under the MIT/X11 license, same as Fennel
 
 Lua parser/lexer (contents of the `lang/` directory) 

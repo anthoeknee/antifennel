@@ -1,5 +1,5 @@
-(local {: list : sym : sym?} (require :fennel))
-(local view (require :fennelview))
+(local {: list : sym : sym? : view : sequence} (require :fennel))
+(local unpack (or table.unpack _G.unpack))
 
 (fn map [tbl f with-last?]
   (let [len (# tbl)
@@ -21,7 +21,7 @@
   (let [params (map params (partial compile scope))
         subscope (doto (make-scope scope)
                    (add-to-scope :param params))]
-    (list (sym :fn) params
+    (list (sym :fn) (sequence (unpack params))
           (unpack (map body (partial compile subscope) true)))))
 
 (fn declare-function [compile scope ast]

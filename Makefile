@@ -18,9 +18,9 @@ antifennel: antifennel.fnl anticompiler.fnl letter.fnl $(PARSER_FENNEL)
 	chmod 755 $@
 
 test: antifennel self test/fennel.lua
-	diff -u antifennel.fnl antifennel_expected.fnl
+	diff -u antifennel_expected.fnl antifennel.fnl
 	@luajit antifennel.lua test.lua > test.fnl
-	diff -u test.fnl test_expected.fnl
+	diff -u test_expected.fnl test.fnl
 	luajit test/init.lua
 
 # Run antifennel on Fennel's own written-in-Lua compiler and then run the full

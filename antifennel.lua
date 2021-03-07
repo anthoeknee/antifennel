@@ -1,5 +1,6 @@
 local fennel = require('fennel')
 local searcher = fennel.makeSearcher({correlate=true})
+debug.traceback = fennel.traceback
 
 if os.getenv("FNL") then -- prefer Fennel to Lua when both exist
    table.insert(package.loaders or package.searchers, 1, searcher)
@@ -46,7 +47,7 @@ if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
    if f then
       f:close()
       for _,code in ipairs(compile(reader.file(filename), filename)) do
-         print(fnlfmt.fnlfmt(code))
+         print(fnlfmt.fnlfmt(code) .. "\n")
       end
    else
       print(("Usage: %s LUA_FILENAME"):format(arg[0]))
