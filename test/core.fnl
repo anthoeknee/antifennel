@@ -48,18 +48,6 @@
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
-(fn test-parsing []
-  (set _G.parsedbg true)
-  (let [cases {"\"\\\\\"" "\\"
-               "\"abc\n\\240\"" "abc\n\240"
-               "\"abc\\\"def\"" "abc\"def"
-               "\"abc\\240\"" "abc\240"
-               :150_000 150000
-               ;; leading underscores aren't numbers
-               "(let [_0 :zero] _0)" "zero"}]
-    (each [code expected (pairs cases)]
-      (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
-
 (fn test-functions []
   (let [cases {;; regular function
                "((fn [x] (* x 2)) 26)" 52
@@ -119,20 +107,20 @@
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
 (fn test-conditionals []
-  (let [cases {"(if _G.non-existent 1 (* 3 9))" 27
-               "(if false \"yep\" \"nope\")" "nope"
-               "(if false :y true :x :trailing :condition)" "x"
-               "(let [b :original b (if false :not-this)] (or b :nil))" "nil"
-               "(let [x 1 y 2] (if (= (* 2 x) y) \"yep\"))" "yep"
-               "(let [x 3 res (if (= x 1) :ONE (= x 2) :TWO true :???)] res)" "???"
-               "(let [x {:y 2}] (if false \"yep\" (< 1 x.y 3) \"uh-huh\" \"nope\"))" "uh-huh"
-               "(var [a z] [0 0]) (when true (set a 192) (set z 12)) (+ z a)" 204
-               "(var a 884) (when nil (set a 192)) a" 884
-               "(var i 0) (var s 0) (while (let [l 11] (< i l)) (set s (+ s i)) (set i (+ 1 i))) s" 55
-               "(var x 12) (if true (set x 22) 0) x" 22
-               "(when (= 12 88) (os.exit 1)) false" false
-               "(while (let [f false] f) (lua :break))" nil}]
-    (each [code expected (pairs cases)]
+  (let [cases [["(if _G.non-existent 1 (* 3 9))" 27]
+               ["(if false \"yep\" \"nope\")" "nope"]
+               ["(if false :y true :x :trailing :condition)" "x"]
+               ["(let [b :original b (if false :not-this)] (or b nil))" nil]
+               ["(let [x 1 y 2] (if (= (* 2 x) y) \"yep\"))" "yep"]
+               ["(let [x 3 res (if (= x 1) :ONE (= x 2) :TWO true :???)] res)" "???"]
+               ["(let [x {:y 2}] (if false \"yep\" (< 1 x.y 3) \"uh-huh\" \"nope\"))" "uh-huh"]
+               ["(var [a z] [0 0]) (when true (set a 192) (set z 12)) (+ z a)" 204]
+               ["(var a 884) (when nil (set a 192)) a" 884]
+               ["(var i 0) (var s 0) (while (let [l 11] (< i l)) (set s (+ s i)) (set i (+ 1 i))) s" 55]
+               ["(var x 12) (if true (set x 22) 0) x" 22]
+               ["(when (= 12 88) (os.exit 1)) false" false]
+               ["(while (let [f false] f) (lua :break))" nil]]]
+    (each [_ [code expected] (ipairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
 (fn test-core []
@@ -193,6 +181,8 @@
                "(let [{: a : b} {:a 3 :b 5}] (+ a b))" 8
                "(let [{:a [x y z]} {:a [1 2 4]}] (+ x y z))" 7
                "(let [{:a x :b y} {:a 2 :b 4}] (+ x y))" 6
+               "(local {:a x &as t} {:a 2 :b 4}) (+ x t.b)" 6
+               "(local [a b c &as t] [1 2 3]) (+ c (. t 2))" 5
                "(local (-a -b) ((fn [] (values 4 29)))) (+ -a -b)" 33
                "(var [a [b c]] [1 [2 3]]) (set a 2) (set c 8) (+ a b c)" 12
                "(var x 0) (each [_ [a b] (ipairs [[1 2] [3 4]])] (set x (+ x (* a b)))) x" 14}]
@@ -222,9 +212,14 @@
                "(length [(values 1 2 3 4 5)])" 5
                "(let [(a b c d e f g) (if (= (+ 1 1) 2) (values 1 2 3 4 5 6 7))] (+ a b c d e f g))" 28
                "(let [(a b c d e f g) (if (= (+ 1 1) 3) nil
-                                       ((or _G.unpack table.unpack) [1 2 3 4 5 6 7]))]
+                                       ((or table.unpack _G.unpack) [1 2 3 4 5 6 7]))]
             (+ a b c d e f g))" 28
-               "(let [t {:st {:v 5 :f #(+ $.v $2)}} x (#(+ $ $2) 1 3)] (t.st:f x) nil)" nil
+               ;; dot shouldn't produce invalid Lua on literals
+               "(tostring (. :hello 12))" "nil"
+               "(tostring (. {} 12))" "nil"
+               "(let [(_ m) (pcall #(. 1 1))] (m:match \"attempt to index a number\"))"
+               "attempt to index a number"
+               "(tostring (let [t {:st {:v 5 :f #(+ $.v $2)}} x (#(+ $ $2) 1 3)] (t.st:f x) nil))" "nil"
                "(let [x (if 3 4 5)] x)" 4
                "(select \"#\" (if (= 1 (- 3 2)) (values 1 2 3 4 5) :onevalue))" 5
                (.. "(do (local c1 20) (local c2 40) (fn xyz [A B] (and A B)) "
@@ -248,7 +243,7 @@
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
-(fn test-method_calls []
+(fn test-method-calls []
   (let [cases {"(let [x {:foo (fn [self arg1] (.. self.bar arg1)) :bar :baz}] (x:foo :quux))"
                "bazquux"
                "(let [x {:y {:foo (fn [self arg1] (.. self.bar arg1)) :bar :baz}}] (x.y:foo :quux))"
@@ -267,66 +262,143 @@
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code) expected code))))
 
-(fn test-match []
-  (let [cases {"(let [_ :bar] (match :foo _ :should-match :foo :no))" "should-match"
-               "(let [k :k] (match [5 :k] :b :no [n k] n))" 5
-               "(let [s :hey] (match s :wat :no :hey :yes))" "yes"
-               "(let [x 3 res (match x 1 :ONE 2 :TWO _ :???)] res)" "???"
-               "(let [x 95] (match [52 85 95] [x y z] :nope [a b x] :yes))" "yes"
-               "(let [x {:y :z}] (match :z x.y 1 _ 0))" 1
-               "(match (+ 1 6) 7 8 8 1 9 2)" 8
-               "(match (+ 1 6) 7 8)" 8
-               "(match (io.open \"/does/not/exist\") (nil msg) :err f f)" "err"
-               "(match (values 1 [1 2]) (x [x x]) :no (x [x y]) :yes)" "yes"
-               "(match (values 5 9) 9 :no (a b) (+ a b))" 14
-               "(match (values nil :nonnil) (true _) :no (nil b) b)" "nonnil"
-               "(match [1 2 1] [x y x] :yes)" "yes"
-               "(match [1 2 3] [3 2 1] :no [2 9 1] :NO :default)" "default"
-               "(match [1 2 3] [a & b] (+ a (. b 1) (. b 2)))" 6
-               "(match [1 2 3] [x y x] :no [x y z] :yes)" "yes"
-               "(match [1 2 [[1]]] [x y [z]] (. z 1))" 1
-               "(match [1 2 [[3]]] [x y [[x]]] :no [x y z] :yes)" "yes"
-               "(match [1 2] [_ _] :wildcard)" "wildcard"
-               "(match [1] [a & b] (# b))" 0
-               "(match [1] [a & b] (length b))" 0
-               "(match [9 5] [a b ?c] :three [a b] (+ a b))" "three"
-               "(match [9 5] [a b c] :three [a b] (+ a b))" 14
-               "(match [:a :b :c] [1 t d] :no [a b :d] :NO [a b :c] b)" "b"
-               "(match [:a :b :c] [a b c] (.. b :eee))" "beee"
-               "(match [:a [:b :c]] [a b :c] :no [:a [:b c]] c)" "c"
-               "(match [:a {:b 8}] [a b :c] :no [:a {:b b}] b)" 8
-               "(match [{:sieze :him} 5]
-            ([f 4] ? f.sieze (= f.sieze :him)) 4
-            ([f 5] ? f.sieze (= f.sieze :him)) 5)" 5
-               "(match nil _ :yes nil :no)" "yes"
-               "(match {:a 1 :b 2} {:c 3} :no {:a n} n)" 1
-               "(match {:sieze :him}
-            (tbl ? (. tbl :no)) :no
-            (tbl ? (. tbl :sieze)) :siezed)" "siezed"
-               "(match {:sieze :him}
-            (tbl ? tbl.sieze tbl.no) :no
-            (tbl ? tbl.sieze (= tbl.sieze :him)) :siezed2)" "siezed2"
-               "(var x 1) (fn i [] (set x (+ x 1)) x) (match (i) 4 :N 3 :n 2 :y)" "y"}]
-    (each [code expected (pairs cases)]
-      (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
-
 (fn test-fennelview []
-  (let [cases {"((require :fennelview) (let [t {}] [t t]) {:detect-cycles? false})"
-               "[{} {}]"
-               "((require :fennelview) (let [t {}] [t t]))"
-               "[@2{} #<table @2>]"
-               "((require :fennelview) {:a 1 :b 52})"
-               "{
-  :a 1
-  :b 52
-}"
-               "((require :fennelview) {:a 1 :b 5} {:one-line true})"
+  (let [cases {"((require :fennel.view) \"123\")"
+               "\"123\""
+               "((require :fennel.view) \"123 \\\"456\\\" 789\")"
+               "\"123 \\\"456\\\" 789\""
+               "((require :fennel.view) 123)"
+               "123"
+               "((require :fennel.view) 2.4)"
+               "2.4"
+               "((require :fennel.view) [] {:empty-as-sequence? true})"
+               "[]"
+               "((require :fennel.view) [])"
+               "{}"
+               "((require :fennel.view) [1 2 3])"
+               "[1 2 3]"
+               "((require :fennel.view) {:a 1 \"a b\" 2})"
+               "{:a 1 \"a b\" 2}"
+               "((require :fennel.view) [])"
+               "{}"
+               "((require :fennel.view) [] {:empty-as-sequence? true})"
+               "[]"
+               "((require :fennel.view) [1 2 3])"
+               "[1 2 3]"
+               "((require :fennel.view) [0 1 2 3 4 5 6 7 8 9 10] {:line-length 5})"
+               "[0\n 1\n 2\n 3\n 4\n 5\n 6\n 7\n 8\n 9\n 10]"
+               "((require :fennel.view) {:a 1 \"a b\" 2})"
+               "{:a 1 \"a b\" 2}"
+               "((require :fennel.view) {:a 1 :b 52} {:line-length 1})"
+               "{:a 1\n :b 52}"
+               "((require :fennel.view) {:a 1 :b 5} {:one-line? true :line-length 1})"
                "{:a 1 :b 5}"
+               ;; nesting
+               "((require :fennel.view) (let [t {}] [t t]) {:detect-cycles? false})"
+               "[{} {}]"
+               "((require :fennel.view) (let [t {}] [t t]))"
+               "[{} {}]"
+               "((require :fennel.view) [{}])"
+               "[{}]"
+               "((require :fennel.view) {[{}] []})"
+               "{[{}] {}}"
+               "((require :fennel.view) {[[]] {[[]] [[[]]]}} {:empty-as-sequence? true})"
+               "{[[]] {[[]] [[[]]]}}"
+               "((require :fennel.view) [1 2 [3 4]] {:line-length 7})"
+               "[1\n 2\n [3 4]]"
+               "((require :fennel.view) {[1] [2 [3]] :data {4 {:data 5} 6 [0 1 2 3]}} {:line-length 15})"
+               "{:data {4 {:data 5}\n        6 [0\n           1\n           2\n           3]}\n [1] [2 [3]]}"
+               "((require :fennel.view) {{:a 1} {:b 2 :c 3}})"
+               "{{:a 1} {:b 2 :c 3}}"
+               "((require :fennel.view) [{:aaa [1 2 3]}] {:line-length 0})"
+               "[{:aaa [1\n        2\n        3]}]"
+               "((require :fennel.view) {:a [1 2 3 4 5 6 7] :b [1 2 3 4 5 6 7] :c [1 2 3 4 5 6 7] :d [1 2 3 4 5 6 7]})"
+               "{:a [1 2 3 4 5 6 7] :b [1 2 3 4 5 6 7] :c [1 2 3 4 5 6 7] :d [1 2 3 4 5 6 7]}"
+               "((require :fennel.view) {:a [1 2] :b [1 2] :c [1 2] :d [1 2]} {:line-length 0})"
+               "{:a [1\n     2]\n :b [1\n     2]\n :c [1\n     2]\n :d [1\n     2]}"
+               "((require :fennel.view)  {:a [1 2 3 4 5 6 7 8] :b [1 2 3 4 5 6 7 8] :c [1 2 3 4 5 6 7 8] :d [1 2 3 4 5 6 7 8]})"
+               "{:a [1 2 3 4 5 6 7 8]\n :b [1 2 3 4 5 6 7 8]\n :c [1 2 3 4 5 6 7 8]\n :d [1 2 3 4 5 6 7 8]}"
+               ;; Unicode
+               "((require :fennel.view) \"ваыв\")"
+               "\"ваыв\""
+               "((require :fennel.view) {[1] [2 [3]] :ваыв {4 {:ваыв 5} 6 [0 1 2 3]}} {:line-length 15})"
+               (if _G.utf8
+                   "{\"ваыв\" {4 {\"ваыв\" 5}\n         6 [0\n            1\n            2\n            3]}\n [1] [2 [3]]}"
+                   "{\"ваыв\" {4 {\"ваыв\" 5}\n             6 [0\n                1\n                2\n                3]}\n [1] [2 [3]]}")
+               ;; the next one may look incorrect in some editors, but is actually correct
+               "((require :fennel.view) {:ǍǍǍ {} :ƁƁƁ {:ǍǍǍ {} :ƁƁƁ {}}} {:line-length 1})"
+               (if _G.utf8 ; older versions of Lua can't indent this correctly
+                   "{\"ƁƁƁ\" {\"ƁƁƁ\" {}\n        \"ǍǍǍ\" {}}\n \"ǍǍǍ\" {}}"
+                   "{\"ƁƁƁ\" {\"ƁƁƁ\" {}\n           \"ǍǍǍ\" {}}\n \"ǍǍǍ\" {}}")
+               ;; cycles
+               "(local t1 {}) (tset t1 :t1 t1) ((require :fennel.view) t1)"
+               "@1{:t1 @1{...}}"
+               "(local t1 {}) (tset t1 t1 t1) ((require :fennel.view) t1)"
+               "@1{@1{...} @1{...}}"
+               "(local v1 []) (table.insert v1 v1) ((require :fennel.view) v1)"
+               "@1[@1[...]]"
+               "(local t1 {}) (local t2 {:t1 t1}) (tset t1 :t2 t2) ((require :fennel.view) t1)"
+               "@1{:t2 {:t1 @1{...}}}"
+               "(local t1 {:a 1 :c 2}) (local v1 [1 2 3]) (tset t1 :b v1) (table.insert v1 2 t1) ((require :fennel.view) t1 {:line-length 1})"
+               "@1{:a 1\n   :b [1\n       @1{...}\n       2\n       3]\n   :c 2}"
+               "(local v1 [1 2 3]) (local v2 [1 2 v1]) (local v3 [1 2 v2]) (table.insert v1 v2) (table.insert v1 v3) ((require :fennel.view) v1 {:line-length 1})"
+               "@1[1\n   2\n   3\n   @2[1\n      2\n      @1[...]]\n   [1\n    2\n    @2[...]]]"
+               "(local v1 []) (table.insert v1 v1) ((require :fennel.view) v1 {:detect-cycles? false :one-line? true :depth 10})"
+               "[[[[[[[[[[...]]]]]]]]]]"
+               "(local t1 []) (tset t1 t1 t1) ((require :fennel.view) t1 {:detect-cycles? false :one-line? true :depth 4})"
+               "{{{{...} {...}} {{...} {...}}} {{{...} {...}} {{...} {...}}}}"
+               ;; sorry :)
+               "(local v1 []) (local v2 [v1]) (local v3 [v1 v2]) (local v4 [v2 v3]) (local v5 [v3 v4]) (local v6 [v4 v5]) (local v7 [v5 v6]) (local v8 [v6 v7]) (local v9 [v7 v8]) (local v10 [v8 v9]) (local v11 [v9 v10]) (table.insert v1 v2) (table.insert v1 v3) (table.insert v1 v4) (table.insert v1 v5) (table.insert v1 v6) (table.insert v1 v7) (table.insert v1 v8) (table.insert v1 v9) (table.insert v1 v10) (table.insert v1 v11) ((require :fennel.view) v1)"
+               "@1[@2[@1[...]]\n   @3[@1[...] @2[...]]\n   @4[@2[...] @3[...]]\n   @5[@3[...] @4[...]]\n   @6[@4[...] @5[...]]\n   @7[@5[...] @6[...]]\n   @8[@6[...] @7[...]]\n   @9[@7[...] @8[...]]\n   @10[@8[...] @9[...]]\n   [@9[...] @10[...]]]"
+               "(local v1 []) (local v2 [v1]) (local v3 [v1 v2]) (local v4 [v2 v3]) (local v5 [v3 v4]) (local v6 [v4 v5]) (local v7 [v5 v6]) (local v8 [v6 v7]) (local v9 [v7 v8]) (local v10 [v8 v9]) (local v11 [v9 v10]) (table.insert v1 v2) (table.insert v1 v3) (table.insert v1 v4) (table.insert v1 v5) (table.insert v1 v6) (table.insert v1 v7) (table.insert v1 v8) (table.insert v1 v9) (table.insert v1 v10) (table.insert v1 v11) (table.insert v2 v11) ((require :fennel.view) v1)"
+               "@1[@2[@1[...]\n      @3[@4[@5[@6[@7[@1[...] @2[...]] @8[@2[...] @7[...]]]\n               @9[@8[...] @6[...]]]\n            @10[@9[...] @5[...]]]\n         @11[@10[...] @4[...]]]]\n   @7[...]\n   @8[...]\n   @6[...]\n   @9[...]\n   @5[...]\n   @10[...]\n   @4[...]\n   @11[...]\n   @3[...]]"
+               ;; __fennelview metamethod test
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) ((require :fennel.view) l1)"
+               "(1\n 2\n 3)"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) ((require :fennel.view) [l1])"
+               "[(1\n  2\n  3)]"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) ((require :fennel.view) [1 l1 2])"
+               "[1\n (1\n  2\n  3)\n 2]"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) ((require :fennel.view) [[1 l1 2]])"
+               "[[1\n  (1\n   2\n   3)\n  2]]"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) ((require :fennel.view) {:abc [l1]})"
+               "{:abc [(1\n        2\n        3)]}"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) ((require :fennel.view) l1 {:one-line? true})"
+               "(1 2 3)"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) ((require :fennel.view) [l1] {:one-line? true})"
+               "[(1 2 3)]"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) ((require :fennel.view) {:abc [l1]} {:one-line? true})"
+               "{:abc [(1 2 3)]}"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) (local l2 (setmetatable [\"a\" \"a b\" [1 2 3] {:a l1 :b []}] {:__fennelview pp-list})) ((require :fennel.view) l2)"
+               "(:a\n \"a b\"\n [1 2 3]\n {:a (1\n      2\n      3)\n  :b {}})"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) (local l2 (setmetatable [\"a\" \"a b\" [1 2 3] {:a l1 :b []}] {:__fennelview pp-list})) ((require :fennel.view) {:list l2})"
+               "{:list (:a\n        \"a b\"\n        [1 2 3]\n        {:a (1\n             2\n             3)\n         :b {}})}"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) (local l2 (setmetatable [\"a\" \"a b\" [1 2 3] {:a l1 :b []}] {:__fennelview pp-list})) ((require :fennel.view) [l2])"
+               "[(:a\n  \"a b\"\n  [1 2 3]\n  {:a (1\n       2\n       3)\n   :b {}})]"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) (local l2 (setmetatable [\"a\" \"a b\" [1 2 3] {:a l1 :b []}] {:__fennelview pp-list})) ((require :fennel.view) {:abc [l1]})"
+               "{:abc [(1\n        2\n        3)]}"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) (local l2 (setmetatable [\"a\" \"a b\" [1 2 3] {:a l1 :b []}] {:__fennelview pp-list})) ((require :fennel.view) l1 {:one-line? true})"
+               "(1 2 3)"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) (local l2 (setmetatable [\"a\" \"a b\" [1 2 3] {:a l1 :b []}] {:__fennelview pp-list})) ((require :fennel.view) [l1] {:one-line? true})"
+               "[(1 2 3)]"
+               "(fn pp-list [x pp opts indent] (values (icollect [i v (ipairs x)] (let [v (pp v opts (+ 1 indent) true)] (values (if (= i 1) (.. \"(\" v) (= i (length x)) (.. \" \" v \")\") (.. \" \" v))))) true)) (local l1 (setmetatable [1 2 3] {:__fennelview pp-list})) (local l2 (setmetatable [\"a\" \"a b\" [1 2 3] {:a l1 :b []}] {:__fennelview pp-list})) ((require :fennel.view) {:abc [l1]} {:one-line? true})"
+               "{:abc [(1 2 3)]}"
                ;; ensure it works on lists/syms inside compiler
                "(eval-compiler
-                  (set _G.out ((require :fennelview) '(a {} [1 2]))))
+                  (set _G.out ((require :fennel.view) '(a {} [1 2]))))
                 _G.out"
-               "(a {} [1 2])"}]
+               "(a {} [1 2])"
+               ;; ensure that `__fennelview' has higher priority than `:prefer-colon?'
+               "(local styles (setmetatable [:colon :quote :depends]
+                                            {:__fennelview
+                                             #(icollect [_ s (ipairs $1)]
+                                                ($2 s $3 $4 (when (not= s :depends) (= s :colon))))}))
+                (local fennel (require :fennel))
+                (fennel.view [(fennel.view styles)
+                              (fennel.view styles {:prefer-colon? true})
+                              (fennel.view styles {:prefer-colon? false})]
+                             {:one-line? true})"
+               "[\":colon \\\"quote\\\" \\\"depends\\\"\" \":colon \\\"quote\\\" :depends\" \":colon \\\"quote\\\" \\\"depends\\\"\"]"}]
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true :compiler-env _G})
                       expected code))
@@ -350,7 +422,5 @@
  : test-if
  : test-loops
  : test-with-open
- : test-match
- : test-method_calls
- : test-parsing
+ : test-method-calls
  : test-comment}

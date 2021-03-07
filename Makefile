@@ -23,6 +23,14 @@ test: antifennel self test/fennel.lua
 	diff -u test_expected.fnl test.fnl
 	luajit test/init.lua
 
+# We run the entire fennel test suite on the antifennel'd copy of Fennel.
+# When updating the test suite from the main fennel repo, copy the entire test/
+# directory, but a few edits will need to be made:
+
+# * Disable the test-nest function in test/core.fnl
+# * Disable linter test suite in test/init.lua
+# * set oldfennel to dofile("test/fennel.lua")
+
 # Run antifennel on Fennel's own written-in-Lua compiler and then run the full
 # test suite using the results after compiling it back to Lua.
 # We have to make one concession in the normal Fennel-in-Lua compiler: all the

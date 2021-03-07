@@ -3,8 +3,8 @@
 Turn Lua code into Fennel code. Does the opposite of what the Fennel
 compiler does.
 
-Somewhat immature, but it works on the 2250-line (pre-selfhosted)
-Fennel compiler with no problems.
+There is a [web-based demo](https://fennel-lang.org/see) where you can
+see it in action on Fennel's web site without installing anything.
 
 ## Usage
 

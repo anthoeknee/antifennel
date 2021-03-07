@@ -27,7 +27,7 @@
           ;; so we'll just pick the next one in the list after host-lua
           host-lua (match _VERSION
                           "Lua 5.1" (if _G.jit :luajit :lua5.1)
-                          (.. :lua (_VERSION:sub 5)))
+                          _ (.. :lua (_VERSION:sub 5)))
           lua-exec ((fn pick-lua [lua-vs i lua-v]
                       (if (= host-lua lua-v)
                         (. lua-vs (+ 1 (% i (# lua-vs)))) ; circular next

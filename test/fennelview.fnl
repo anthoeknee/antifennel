@@ -1,7 +1,7 @@
 (local l (require :test.luaunit))
 (local fennel (require :fennel))
-(local view (require :fennelview))
-(local generate (fennel.dofile "test/generate.fnl"))
+(local view (require :fennel.view))
+(local {: generate} (fennel.dofile "test/generate.fnl"))
 
 (fn count [t]
   (var c 0)
@@ -31,7 +31,7 @@
 
 (fn test-fennelview []
   (for [_ 1 16]
-    (let [item (generate)
+    (let [item (generate 1)
           viewed (view item)
           round-tripped (fennel.eval viewed)]
       ;; you would think assertEquals would work here but it doesn't!
@@ -42,12 +42,37 @@
   (let [view-target {:my-userdata io.stdout}
         expected-with-mt "{:my-userdata \"HI, I AM USERDATA\"}"
         expected-without-mt "^%{%:my%-userdata %#%<file %([x0-9a-f]+%)%>%}$"]
-    (l.assertStrContains (view view-target {:one-line true})
+    (l.assertStrContains (view view-target {:one-line? true})
                          expected-without-mt
                          true)
     (tset (getmetatable io.stdout) :__fennelview #"\"HI, I AM USERDATA\"")
-    (l.assertEquals (view view-target {:one-line true})
+    (l.assertEquals (view view-target {:one-line? true})
                     expected-with-mt)
     (tset (getmetatable io.stdout) :__fennelview nil)))
 
-{: test-fennelview : test-fennelview-userdata-handling}
+(fn test-cycles []
+  (let [t {:a 1 :b 2}
+        t2 {:tbl [1 :b] :foo 19}
+        sparse [:abc]]
+    (set t.t t)
+    (tset t2.tbl 3 t2)
+    (tset sparse 4 sparse)
+    (l.assertEquals (view t) "@1{:a 1 :b 2 :t @1{...}}")
+    (l.assertEquals (view t2) "@1{:foo 19 :tbl [1 \"b\" @1{...}]}")
+    (l.assertEquals (view sparse) "@1{1 \"abc\" 4 @1{...}}")))
+
+(fn test-newline []
+  (let [s "hello\nworld!\n"]
+    (l.assertEquals (view s) "\"hello\nworld!\n\"")
+    (l.assertEquals (view s {:escape-newlines? true})
+                    "\"hello\\nworld!\\n\"")))
+
+(fn test-escapes []
+  (l.assertEquals (view ["\a" "\t"]) "[\"\\a\" \"\\t\"]")
+  (l.assertEquals (view "[\7-\13]") "\"[\\a-\\r]\""))
+
+{: test-fennelview
+ : test-newline
+ : test-fennelview-userdata-handling
+ : test-cycles
+ : test-escapes}

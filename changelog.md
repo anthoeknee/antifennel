@@ -2,8 +2,9 @@
 
 ## 0.2.0 / ???
 
+* Use version 0.2.1 of fnlfmt.
 * Emit method calls as foo:bar where appropriate.
-* Upgrade to Fennel 0.7.1-dev.
+* Upgrade to Fennel 0.8.2-dev.
 * Use `let` where appropriate to replace `do+local` or directly inside `fn`.
 * Emit identifiers using kebab-case instead of camelCase or snake_case.
 * Compile `local f = function()` to `fn` idiomatically.

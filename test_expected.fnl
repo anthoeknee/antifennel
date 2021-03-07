@@ -1,6 +1,6 @@
-(tset body (+ (# body) 1) stmt)
+(tset body (+ (length body) 1) stmt)
 
-(tset (. scope.symmeta (. parts 1)) "used" true)
+(tset (. scope.symmeta (. parts 1)) :used true)
 
 (tset scope.symmeta 1 true)
 
@@ -10,15 +10,15 @@
 
 (global SCREAMING_SNAKE true)
 
-(string:match "abc")
+(string:match :abc)
 
 (local t {:t2 {:f (fn [x]
                     x)}})
 
-(: (. t "t2") "f")
+(: (. t :t2) :f)
 
 (each [k v (pairs {:a 1})]
-  (set-forcibly! k "c"))
+  (set-forcibly! k :c))
 
 (print (.. (or base "") "_" append "_"))
 
@@ -32,11 +32,13 @@
 
 (set-forcibly! f 59)
 
-(let [(boo twenty) (values "hoo" 20) fifteen 15]
+(let [(boo twenty) (values :hoo 20)
+      fifteen 15]
   (print boo (+ twenty fifteen)))
 
 (fn letter []
-  (let [x 19 y 20]
+  (let [x 19
+        y 20]
     (+ x y)))
 
 (print ((fn []
@@ -44,8 +46,8 @@
             x))))
 
 (fn f123 [_1]
-  (let [_0 "zero"]
+  (let [_0 :zero]
     (print (.. _0 _1))))
 
-(. (or (attributes path) []) "mode")
+(. (or (attributes path) {}) :mode)
 

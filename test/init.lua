@@ -1,31 +1,35 @@
--- prevent luarocks-installed fennel from overriding
-package.loaded.fennel = dofile("test/fennel.lua")
+-- We want to make sure the compiler can load under strict mode
+local strict = function(_, k) if k then error("STRICT MODE YALL: " .. k) end end
+setmetatable(_G, {__index = strict, __newindex = strict})
+
+-- Ensure we're getting the Fennel we expect, not luarocks or anything
+package.loaded.fennel = dofile("fennel.lua")
 table.insert(package.loaders or package.searchers, package.loaded.fennel.searcher)
-package.loaded.fennelview = dofile("fennelview.lua")
-package.loaded.fennelfriend = package.loaded.fennel.dofile("test/fennelfriend.fnl")
+setmetatable(_G, nil) -- but we don't want strict mode for tests
 
-local lu = require('test.luaunit')
-local runner = lu.LuaUnit:new()
-runner:setOutputType(os.getenv('FNL_TEST_OUTPUT') or 'tap')
+local runner = require("test.luaunit").LuaUnit:new()
+runner:setOutputType(os.getenv("FNL_TEST_OUTPUT") or "tap")
 
--- attach test modules (which export k/v tables of test fns) as alists
-local function addModule(instances, moduleName)
-    for k, v in pairs(require("test." .. moduleName)) do
-        instances[#instances + 1] = {k, v}
-    end
-end
+-- We have to load the tests with the old version of Fennel; otherwise
+-- bugs in the current implementation will prevent the tests from loading!
+local oldfennel = dofile("test/fennel.lua")
 
-local function testall(testModules)
+local function testall(suites)
     local instances = {}
-    for _, module in ipairs(testModules) do
-        addModule(instances, module)
+    for _, test in ipairs(suites) do
+        -- attach test modules (which export k/v tables of test fns) as alists
+        local suite = oldfennel.dofile("test/" .. test .. ".fnl",
+                                       {useMetadata = true})
+        for name, testfn in pairs(suite) do
+            table.insert(instances, {name,testfn})
+        end
     end
     return runner:runSuiteByInstances(instances)
 end
 
 if(#arg == 0) then
    testall({"core", "mangling", "quoting", "misc", "docstring", "fennelview",
-            "failures", "repl", "cli", "macro"})
+            "parser", "failures", "repl", "cli", "macro"})
 else
    testall(arg)
 end

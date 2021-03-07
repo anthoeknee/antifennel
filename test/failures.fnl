@@ -61,6 +61,8 @@
   "(match [1 2 3] [a & b c] nil)" "rest argument before last parameter"
   "(not true false)" "expected one argument"
   "(print @)" "illegal character: @"
+  ;; TODO: this should be an error in 1.0
+  ;; "(local abc&d 19)" "illegal character: &"
   "(set [a b c] [1 2 3]) (+ a b c)" "expected local"
   "(set a 19)" "error in 'a' unknown:1: expected local"
   "(set)" "Compile error in 'set' unknown:1: expected name and value"
@@ -68,10 +70,14 @@
   "(x[1 2])" "expected whitespace before opening delimiter ["
   "(fn abc:def [x] (+ x 2))" "unexpected multi symbol abc:def"
   "(macros {:foo {:bar (fn [] `(print :test))}})" "expected each macro to be function"
+  "(macro m [] (getmetatable :foo)) (m)" "Illegal metatable"
   "(import-macros test :test.macros) (test.asdf)" "macro not found in imported macro module"
   "(import-macros {: asdf} :test.macros)" "macro asdf not found in module test.macros"
   "(with-open [(x y z) (values 1 2 3)])" "with-open only allows symbols in bindings"
   "#[$ $...] 1 2 3" "$ and $... in hashfn are mutually exclusive"
+  "(eval-compiler (assert-compile false \"oh no\" 123))" "oh no"
+  "(partial)" "expected a function"
+  "(#)" "expected one argument"
 })
 
 (fn test-failures []
@@ -87,7 +93,11 @@
 ;; test/bad/friendly.sh and review that output.
 (fn test-suggestions []
   (let [(_ msg) (pcall fennel.dofile "test/bad/set-local.fnl")
-        (_ parse-msg) (pcall fennel.dofile "test/bad/odd-table.fnl")]
+        (_ parse-msg) (pcall fennel.dofile "test/bad/odd-table.fnl")
+        (_ assert-msg) (pcall fennel.eval
+                              "(eval-compiler (assert-compile nil \"bad\" 1))")
+        (_ msg4) (pcall fennel.eval "(abc] ;; msg4")
+        (_ msg5) (pcall fennel.eval "(let) ;; msg5")]
     ;; show the raw error message
     (l.assertStrContains msg "expected var x")
     ;; offer suggestions
@@ -96,6 +106,11 @@
     (l.assertStrContains msg "(set x 3)")
     (l.assertStrContains msg "\n     ^")
     ;; parse error
-    (l.assertStrContains parse-msg "{:a 1 :b 2 :c}")))
+    (l.assertStrContains parse-msg "{:a 1 :b 2 :c}")
+    ;; non-table AST in assertion
+    (l.assertStrContains assert-msg "bad")
+    ;; source should be part of the error message
+    (l.assertStrContains msg4 "msg4")
+    (l.assertStrContains msg5 "msg5")))
 
 {: test-failures : test-suggestions}
