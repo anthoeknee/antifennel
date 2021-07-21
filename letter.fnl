@@ -35,9 +35,12 @@ When f returns a truthy value, recursively walks the children."
     (tset node 1 (fennel.sym :let))
     (locals-to-bindings node bindings)))
 
+(fn body-start [node]
+  (let [has-name? (fennel.sym? (. node 2))]
+    (if has-name? 4 3)))
+
 (fn transform-fn [node]
-  (let [has-name? (fennel.sym? (. node 2))
-        do-loc (if has-name? 4 3)
+  (let [do-loc (body-start node)
         do-node (fennel.list (fennel.sym :do))]
     (move-body node do-node do-loc)
     (table.insert node do-loc do-node)))
@@ -48,14 +51,15 @@ When f returns a truthy value, recursively walks the children."
 
 (fn fn-local-node? [node]
   (and (= :table (type node)) (= :fn (tostring (. node 1)))
-       (or (and (= :table (type (. node 3))) (= :local (tostring (. node 3 1))))
-           (and (= :table (type (. node 4))) (= :local (tostring (. node 4 1)))))))
+       (let [first-body (. node (body-start node))]
+         (and (= :table (type first-body))
+              (= :local (tostring (. first-body 1)))))))
 
 (fn letter [idx node]
-  (when (do-local-node? node)
-    (transform-do node))
   (when (fn-local-node? node)
     (transform-fn node))
+  (when (do-local-node? node)
+    (transform-do node))
   (= :table (type node)))
 
 (fn reverse-ipairs [t] ;; based on lume.ripairs
