@@ -1,11 +1,10 @@
 local fennel = require('fennel')
-local searcher = fennel.makeSearcher({correlate=true})
 debug.traceback = fennel.traceback
 
 if os.getenv("FNL") then -- prefer Fennel to Lua when both exist
-   table.insert(package.loaders or package.searchers, 1, searcher)
+   table.insert(package.loaders or package.searchers, 1, fennel.searcher)
 else
-   table.insert(package.loaders or package.searchers, searcher)
+   table.insert(package.loaders or package.searchers, fennel.searcher)
 end
 
 local lex_setup = require('lang.lexer')
@@ -17,12 +16,11 @@ local compiler = require('anticompiler')
 local letter = require("letter")
 local fnlfmt = require("fnlfmt")
 
-local reservedFennel = {['doc']=true, ['lua']=true, ['hashfn']=true,
-   ['macro']=true, ['macros']=true, ['macroexpand']=true, ['macrodebug']=true,
-   ['values']=true, ['when']=true, ['each']=true, ['fn']=true, ['lambda']=true,
-   ['partial']=true, ['set']=true, ['global']=true, ['var']=true, ['let']=true,
-   ['tset']=true, ['doto']=true, ['match']=true, ['rshift']=true,
-   ['lshift']=true, ['bor']=true, ['band']=true, ['bnot']=true, ['bxor']=true}
+local reserved = {}
+
+for name,data in pairs(fennel.syntax()) do
+   if data["special?"] then reserved[name] = true end
+end
 
 local function uncamelize(name)
    local function splicedash(pre, cap) return pre .. "-" .. cap:lower() end
@@ -30,7 +28,7 @@ local function uncamelize(name)
 end
 
 local function mangle(name, field)
-   if not field and reservedFennel[name] then name = "___" .. name .. "___" end
+   if not field and reserved[name] then name = "___" .. name .. "___" end
    return field and name or uncamelize(name):gsub("([a-z0-9])_", "%1-")
 end
 

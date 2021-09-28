@@ -1,12 +1,10 @@
 (local fennel (require :fennel))
 
-(local searcher (fennel.makeSearcher {}))
-
 (set debug.traceback fennel.traceback)
 
 (if (os.getenv :FNL) (table.insert (or package.loaders package.searchers) 1
-                                   searcher)
-    (table.insert (or package.loaders package.searchers) searcher))
+                                   fennel.searcher)
+    (table.insert (or package.loaders package.searchers) fennel.searcher))
 
 (local lex-setup (require :lang.lexer))
 
@@ -22,7 +20,11 @@
 
 (local fnlfmt (require :fnlfmt))
 
-(local reserved-fennel {})
+(local reserved {})
+
+(each [name data (pairs (fennel.syntax))]
+  (when (. data :special?)
+    (tset reserved name true)))
 
 (fn uncamelize [name]
   (fn splicedash [pre cap]
@@ -31,7 +33,7 @@
   (name:gsub "([a-z0-9])([A-Z])" splicedash))
 
 (fn mangle [name field]
-  (when (and (not field) (. reserved-fennel name))
+  (when (and (not field) (. reserved name))
     (set-forcibly! name (.. "___" name "___")))
   (or (and field name) (: (uncamelize name) :gsub "([a-z0-9])_" "%1-")))
 
