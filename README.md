@@ -54,7 +54,6 @@ Send patches directly to the maintainer or the
 ## TODO
 
 * Add support for non-LuaJIT
-* Support mixed tables: `table.insert(self.deferred_draws, 1, { fn = fn, ... })`
 * Support multi-value-function early return
 
 ## Copyright

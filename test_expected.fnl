@@ -49,5 +49,7 @@
   (let [_0 :zero]
     (print (.. _0 _1))))
 
+(print {1 :bcd 2 ... :a :value})
+
 (. (or (attributes path) {}) :mode)
 

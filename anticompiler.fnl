@@ -233,10 +233,10 @@
 
 (fn table* [compile scope {: keyvals}]
   (let [out {}]
-    (each [i [v k] (pairs keyvals)]
+    (each [_ [v k] (pairs keyvals)]
       (if k
           (tset out (compile scope k) (compile scope v))
-          (tset out i (compile scope v))))
+          (table.insert out (compile scope v))))
     out))
 
 (fn do* [compile scope {: body} tail?]

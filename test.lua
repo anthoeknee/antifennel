@@ -45,4 +45,6 @@ local function f123(_1)
    print(_0 .. _1)
 end
 
+print({ a = "value", "bcd", ... })
+
 return (attributes(path) or {}).mode
