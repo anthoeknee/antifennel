@@ -2550,10 +2550,6 @@ package.preload["fennel.compiler"] = package.preload["fennel.compiler"] or funct
   end
   local function compile_table(ast, scope, parent, opts, compile1)
     local buffer = {}
-    for i = 1, #ast do
-      local nval = ((i ~= #ast) and 1)
-      table.insert(buffer, exprs1(compile1(ast[i], scope, parent, {nval = nval})))
-    end
     local function write_other_values(k)
       if ((type(k) ~= "number") or (math.floor(k) ~= k) or (k < 1) or (k > #ast)) then
         if ((type(k) == "string") and utils["valid-lua-identifier?"](k)) then
@@ -2584,6 +2580,10 @@ package.preload["fennel.compiler"] = package.preload["fennel.compiler"] or funct
         return string.format("%s = %s", k1, tostring(v))
       end
       utils.map(keys, _262_, buffer)
+    end
+    for i = 1, #ast do
+      local nval = ((i ~= #ast) and 1)
+      table.insert(buffer, exprs1(compile1(ast[i], scope, parent, {nval = nval})))
     end
     return handle_compile_opts({utils.expr(("{" .. table.concat(buffer, ", ") .. "}"), "expression")}, parent, opts, ast)
   end

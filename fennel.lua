@@ -38,7 +38,7 @@ package.preload["fennel.repl"] = package.preload["fennel.repl"] or function(...)
   end
   local save_source = table.concat({"local ___i___ = 1", "while true do", " local name, value = debug.getlocal(1, ___i___)", " if(name and name ~= \"___i___\") then", " ___replLocals___[name] = value", " ___i___ = ___i___ + 1", " else break end end"}, "\n")
   local function splice_save_locals(env, lua_source)
-    env.___replLocals___ = (env.___replLocals___ or {})
+    env.___replLocals___ = (rawget(env, "___replLocals___") or {})
     local spliced_source = {}
     local bind = "local %s = ___replLocals___['%s']"
     for line in lua_source:gmatch("([^\n]+)\n?") do
@@ -2354,10 +2354,6 @@ package.preload["fennel.compiler"] = package.preload["fennel.compiler"] or funct
   end
   local function compile_table(ast, scope, parent, opts, compile1)
     local buffer = {}
-    for i = 1, #ast do
-      local nval = ((i ~= #ast) and 1)
-      table.insert(buffer, exprs1(compile1(ast[i], scope, parent, {nval = nval})))
-    end
     local function write_other_values(k)
       if ((type(k) ~= "number") or (math.floor(k) ~= k) or (k < 1) or (k > #ast)) then
         if ((type(k) == "string") and utils["valid-lua-identifier?"](k)) then
@@ -2388,6 +2384,10 @@ package.preload["fennel.compiler"] = package.preload["fennel.compiler"] or funct
         return string.format("%s = %s", k1, tostring(v))
       end
       utils.map(keys, _262_, buffer)
+    end
+    for i = 1, #ast do
+      local nval = ((i ~= #ast) and 1)
+      table.insert(buffer, exprs1(compile1(ast[i], scope, parent, {nval = nval})))
     end
     return handle_compile_opts({utils.expr(("{" .. table.concat(buffer, ", ") .. "}"), "expression")}, parent, opts, ast)
   end
@@ -2586,7 +2586,7 @@ package.preload["fennel.compiler"] = package.preload["fennel.compiler"] or funct
   end
   local function require_include(ast, scope, parent, opts)
     opts.fallback = function(e)
-      utils.warn(("include module not found,- falling back to require: %s"):format(tostring(e)))
+      utils.warn(("include module not found, falling back to require: %s"):format(tostring(e)))
       return utils.expr(string.format("require(%s)", tostring(e)), "statement")
     end
     return scopes.global.specials.include(ast, scope, parent, opts)
