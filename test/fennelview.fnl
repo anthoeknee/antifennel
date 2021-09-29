@@ -29,7 +29,7 @@
       (= (type a) (type b) :table) (table= a b deep=)
       (= (tostring a) (tostring b))))
 
-(fn test-fennelview []
+(fn test-generated []
   (for [_ 1 16]
     (let [item (generate 1)
           viewed (view item)
@@ -59,7 +59,7 @@
     (tset sparse 4 sparse)
     (l.assertEquals (view t) "@1{:a 1 :b 2 :t @1{...}}")
     (l.assertEquals (view t2) "@1{:foo 19 :tbl [1 \"b\" @1{...}]}")
-    (l.assertEquals (view sparse) "@1{1 \"abc\" 4 @1{...}}")))
+    (l.assertEquals (view sparse) "@1[\"abc\" nil nil @1[...]]")))
 
 (fn test-newline []
   (let [s "hello\nworld!\n"]
@@ -71,8 +71,12 @@
   (l.assertEquals (view ["\a" "\t"]) "[\"\\a\" \"\\t\"]")
   (l.assertEquals (view "[\7-\13]") "\"[\\a-\\r]\""))
 
-{: test-fennelview
+(fn test-gaps []
+  (l.assertEquals (view {967216353 788}) "{967216353 788}"))
+
+{: test-generated
  : test-newline
  : test-fennelview-userdata-handling
  : test-cycles
- : test-escapes}
+ : test-escapes
+ : test-gaps}

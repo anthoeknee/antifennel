@@ -10,8 +10,8 @@
     (when f (f:close) true)))
 
 (λ peval [code ...]
-  (local cmd [(string.format "./fennel --eval %q" code) ...])
-  (let [proc (io.popen (table.concat cmd " "))
+  (let [cmd [(string.format "./fennel --eval %q" code) ...]
+        proc (io.popen (table.concat cmd " "))
         output (: (proc:read :*a) :gsub "\n$" "")]
     (values (proc:close) output))) ; proc:close gives exit status
 
@@ -44,4 +44,5 @@
         ;; pcall in Lua 5.1 doesn't give status with (proc:close)
         {1 (if (= _VERSION "Lua 5.1") true nil) 2 "test"}
         (.. "errors should cause failing exit status with --lua " lua-exec)))))
+
 {: test-cli : test-lua-flag}

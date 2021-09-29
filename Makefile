@@ -24,18 +24,23 @@ test: antifennel self test/fennel.lua
 	luajit test/init.lua
 
 # We run the entire fennel test suite on the antifennel'd copy of Fennel.
-# When updating the test suite from the main fennel repo, copy the entire test/
-# directory, but a few edits will need to be made:
 
-# * Disable the test-nest function in test/core.fnl
-# * Disable linter test suite in test/init.lua
-# * set oldfennel to dofile("test/fennel.lua")
+update-tests:
+	rm -rf test
+	cp -r ../fennel/test .
+	echo "{}" > test/linter.fnl # don't bother
+	sed "s/: test-nest/;; : test-nest/" -i test/core.fnl # don't bother
+	sed "s/old.fennel/test.fennel/g" -i test/init.lua # bootstrap compiler moved
 
-# Run antifennel on Fennel's own written-in-Lua compiler and then run the full
-# test suite using the results after compiling it back to Lua.
-# We have to make one concession in the normal Fennel-in-Lua compiler: all the
-# locals set at the top are edited to use _G.foo instead of foo in order to
-# appease Fennel's own compiler. Other than that it's purely stock (rev 180b455)
+update-fennel: ../fennel/fennel.lua ../fennel/fennel
+	cp $^ .
+
+update: update-fennel update-tests
+
+# Run antifennel on a compiled copy of the Fennel compiler and then run the full
+# test suite using the results after compiling it back to Lua. Round-trip it so
+# many times your head spins.
+
 test/fennel.lua: fennel.lua anticompiler.fnl
 	luajit antifennel.lua fennel.lua | ./fennel --compile - > $@
 
@@ -53,4 +58,4 @@ ci: test count
 
 count: ; cloc $(PARSER_FENNEL) anticompiler.fnl antifennel.lua
 
-.PHONY: test self clean ci
+.PHONY: test self clean ci update update-fennel update-tests
