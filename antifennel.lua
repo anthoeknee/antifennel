@@ -19,7 +19,7 @@ local fnlfmt = require("fnlfmt")
 local reserved = {}
 
 for name,data in pairs(fennel.syntax()) do
-   if data["special?"] then reserved[name] = true end
+   if data["special?"] or data["macro?"]then reserved[name] = true end
 end
 
 local function uncamelize(name)

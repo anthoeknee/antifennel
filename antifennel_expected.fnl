@@ -23,7 +23,7 @@
 (local reserved {})
 
 (each [name data (pairs (fennel.syntax))]
-  (when (. data :special?)
+  (when (or (. data :special?) (. data :macro?))
     (tset reserved name true)))
 
 (fn uncamelize [name]
