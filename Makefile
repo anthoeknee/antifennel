@@ -21,6 +21,7 @@ test: antifennel self test/fennel.lua
 	diff -u antifennel_expected.fnl antifennel.fnl
 	@luajit antifennel.lua test.lua > test.fnl
 	diff -u test_expected.fnl test.fnl
+	luajit fennel --globals "*" test.fnl
 	luajit test/init.lua
 
 # We run the entire fennel test suite on the antifennel'd copy of Fennel.

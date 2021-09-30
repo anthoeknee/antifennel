@@ -1,19 +1,24 @@
-body[#body + 1] = stmt
-scope.symmeta[parts[1]].used = true
-scope.symmeta[1] = true
-foo=bar
-ids[k] = ast:var_declare(vlist[k])
+local function _()
+   body[#body + 1] = stmt
+   scope.symmeta[parts[1]].used = true
+   scope.symmeta[1] = true
+   foo=bar
+   ids[k] = ast:var_declare(vlist[k])
+end
+
+local function noprint() end
 
 SCREAMING_SNAKE = true
 
-string:match("abc")
+("abcdef"):match("abc")
 
 local t = {t2={f=function(x) return x end}}
 (t["t2"]):f()
 
 for k,v in pairs({a=1}) do k="c" end
 
-print((base or '') .. '_' .. append .. '_')
+local append = "two"
+noprint((base or '') .. '_' .. append .. '_')
 
 local f = function(x, y)
    local z,zz = 9,8 -- mutable local, immutable local
@@ -29,7 +34,7 @@ f = 59
 do
    local boo, twenty = "hoo", 20
    local fifteen = 15
-   print(boo, twenty+fifteen)
+   noprint(boo, twenty+fifteen)
 end
 
 local letter = function()
@@ -38,13 +43,22 @@ local letter = function()
    return x+y
 end
 
-print((function() local x = 1 return x end)())
+noprint((function() local x = 1 return x end)())
 
 local function f123(_1)
    local _0 = "zero"
-   print(_0 .. _1)
+   noprint(_0 .. _1)
+   return {}, 2, 3
 end
 
-print({ a = "value", "bcd", ... })
+local function bcd(...)
+   local t = { a = "value", "bcd", ... }
+   assert(t[3] == "three", "three!")
+   if true then return letter(), f123("a") end
+   return nil
+end
 
-return (attributes(path) or {}).mode
+local _, _, two = bcd("two", "three")
+assert(two == 2, "two")
+
+return (f123("path") or {}).mode
