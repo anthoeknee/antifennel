@@ -54,7 +54,6 @@ Send patches directly to the maintainer or the
 ## TODO
 
 * Add support for non-LuaJIT
-* Support multi-value-function early return
 
 ## Copyright
 

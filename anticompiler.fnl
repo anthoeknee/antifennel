@@ -67,15 +67,25 @@
         (not (or (= a.kind "Identifier") (= a.kind "Literal"))) true
         (any-complex-expressions? args (+ i 1)))))
 
-(fn early-return-complex [compile scope args]
+(fn early-return-bindings [binding-names bindings i arg originals]
+  (if (and (= :CallExpression (. originals i :kind)) (= i (length originals)))
+      (let [name (.. "___antifnl_rtns_" i "___")]
+        (table.insert binding-names
+                      (string.format "(table.unpack or _G.unpack)(%s)" name))
+        (table.insert bindings (sym name))
+        (table.insert bindings (sequence arg)))
+      (let [name (.. "___antifnl_rtn_" i "___")]
+        (table.insert binding-names name)
+        (table.insert bindings (sym name))
+        (table.insert bindings arg))))
+
+(fn early-return-complex [compile scope args original-args]
   ;; we have to precompile the args and let-bind them because we can't put
   ;; Fennel expressions inside the lua special form.
   (let [binding-names []
         bindings []]
     (each [i a (ipairs args)]
-      (table.insert binding-names (.. "___antifnl_rtn_" i "___"))
-      (table.insert bindings (sym (. binding-names i)))
-      (table.insert bindings a))
+      (early-return-bindings binding-names bindings i a original-args))
     (list (sym :let) bindings
           (list (sym :lua)
                 (.. "return " (table.concat binding-names ", "))))))
@@ -83,7 +93,7 @@
 (fn early-return [compile scope {: arguments}]
   (let [args (map arguments (partial compile scope))]
     (if (any-complex-expressions? arguments 1)
-        (early-return-complex compile scope args)
+        (early-return-complex compile scope args arguments)
         (list (sym :lua)
               (.. "return " (table.concat (map args view) ", "))))))
 
