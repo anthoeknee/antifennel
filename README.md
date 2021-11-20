@@ -8,6 +8,8 @@ see it in action on Fennel's web site without installing anything.
 
 ## Usage
 
+The only prerequisites are having LuaJIT and GNU Make installed.
+
     $ make
     $ ./antifennel targetfile.lua > targetfile.fnl
 
