@@ -61,4 +61,9 @@ end
 local _, _, two = bcd("two", "three")
 assert(two == 2, "two")
 
+local worldObjects, will_o_the_wisp
+for i, match in ipairs({}) do
+   noprint()
+end
+
 return (f123("path") or {}).mode

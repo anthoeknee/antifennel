@@ -28,8 +28,11 @@ local function uncamelize(name)
 end
 
 local function mangle(name, field)
-   if not field and reserved[name] then name = "___" .. name .. "___" end
-   return field and name or uncamelize(name):gsub("([a-z0-9])_", "%1-")
+   if not field then
+      name = uncamelize(name):gsub("([a-z0-9])_", "%1-")
+      name = reserved[name] and "___" .. name .. "___" or name
+   end
+   return name
 end
 
 local function compile(rdr, filename)

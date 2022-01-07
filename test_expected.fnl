@@ -64,5 +64,10 @@
 
 (assert (= two 2) :two)
 
+(local (world-objects will-o-the-wisp) nil)
+
+(each [i ___match___ (ipairs {})]
+  (noprint))
+
 (. (or (f123 :path) {}) :mode)
 

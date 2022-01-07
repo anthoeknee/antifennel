@@ -33,9 +33,10 @@
   (name:gsub "([a-z0-9])([A-Z])" splicedash))
 
 (fn mangle [name field]
-  (when (and (not field) (. reserved name))
-    (set-forcibly! name (.. "___" name "___")))
-  (or (and field name) (: (uncamelize name) :gsub "([a-z0-9])_" "%1-")))
+  (when (not field)
+    (set-forcibly! name (: (uncamelize name) :gsub "([a-z0-9])_" "%1-"))
+    (set-forcibly! name (or (and (. reserved name) (.. "___" name "___")) name)))
+  name)
 
 (fn compile [rdr filename]
   (let [ls (lex-setup rdr filename)
