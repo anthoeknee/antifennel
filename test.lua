@@ -63,7 +63,7 @@ assert(two == 2, "two")
 
 local worldObjects, will_o_the_wisp
 for i, match in ipairs({}) do
-   noprint()
+   noprint(match)
 end
 
 return (f123("path") or {}).mode

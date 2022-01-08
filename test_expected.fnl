@@ -67,7 +67,7 @@
 (local (world-objects will-o-the-wisp) nil)
 
 (each [i ___match___ (ipairs {})]
-  (noprint))
+  (noprint ___match___))
 
 (. (or (f123 :path) {}) :mode)
 
