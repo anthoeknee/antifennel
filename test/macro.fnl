@@ -15,6 +15,11 @@
     (each [_ [code expected] (ipairs cases)]
       (l.assertEquals (fennel.eval code) expected code))))
 
+(fn test-doto []
+  (let [cases [["(doto [1 2 3] (table.sort #(> $1 $2)) table.sort)" [1 2 3]]]]
+    (each [_ [code expected] (ipairs cases)]
+      (l.assertEquals (fennel.eval code) expected code))))
+
 (fn test-?. []
   (let [cases [["(?. {:a 1})" {:a 1}]
                ["(?. {:a 1} :a)" 1]
@@ -65,13 +70,15 @@
                 (defn join [sep ...] (table.concat [...] sep))
                 (join :: :num (->1 5 (* 2) (+ 8)))"
         unsandboxed "(import-macros {: unsandboxed} :test.macros)
-                     (unsandboxed)"]
+                     (unsandboxed)"
+        not-unqualified "(import-macros hi :test.macros) (print (inc 1))"]
     (l.assertEquals (fennel.eval multigensym) 519)
     (l.assertEquals (fennel.eval inc) 4)
     (l.assertEquals (fennel.eval inc2) 7)
     (l.assertEquals (fennel.eval rename) "num:18")
     (l.assertEquals (fennel.eval unsandboxed {:compiler-env _G})
-                    "[\"no\" \"sandbox\"]") ))
+                    "[\"no\" \"sandbox\"]")
+    (l.assertFalse (pcall fennel.eval not-unqualified))))
 
 (fn test-macro-path []
   (l.assertEquals (fennel.eval "(import-macros m :test.other-macros) (m.m)")
@@ -229,7 +236,8 @@
                "(match false (where (or nil false true)) :ok _ :not-ok)" :ok
                "(match nil (where (or nil false true)) :ok _ :not-ok)" :ok
                "(match {:a 1 :b 2} {: a &as t} (+ a t.b))" 3
-               "(match [1 2 3] [a b &as t] (+ a b (. t 3)))" 6}]
+               "(match [1 2 3] [a b &as t] (+ a b (. t 3)))" 6
+               "(match [1 2] [a & [b c]] (+ a b c) _ :subrest)" :subrest}]
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
@@ -259,6 +267,7 @@
     (l.assertEquals (fennel.eval code) "iftrue(do (fn {} \"x\"))")))
 
 {: test-arrows
+ : test-doto
  : test-?.
  : test-import-macros
  : test-require-macros

@@ -30,7 +30,8 @@
                "(and (values))" true
                "(and true true (values))" true
                "(and true (values true false) true)" true
-               "(and true (values true false))" false}]
+               "(and true (values true false))" false
+               "(tostring (and _G.xyz (do _G.xyz.y) _G.xyz))" :nil}]
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
@@ -214,7 +215,10 @@
                "(local (-a -b) ((fn [] (values 4 29)))) (+ -a -b)" 33
                "(var [a [b c]] [1 [2 3]]) (set a 2) (set c 8) (+ a b c)" 12
                "(var x 0) (each [_ [a b] (ipairs [[1 2] [3 4]])] (set x (+ x (* a b)))) x" 14
-               "(let [({: x} y) (values {:x 10} 20)] (+ x y))" 30}]
+               "(let [({: x} y) (values {:x 10} 20)] (+ x y))" 30
+               "(let [[a & b] (setmetatable {} {:__fennelrest #42})] b)" 42
+               "(let [[a & b] (setmetatable {} {:__fennelrest #false})] b)" false
+               "(let [[a & b] (setmetatable [1 2 3 4 5] {:__fennelrest (fn [t k] [((or table.unpack _G.unpack) t (+ k 1))])})] b)" [3 4 5]}]
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
@@ -239,7 +243,10 @@
                "(let [t {} _ (set t.field :let-side)] t.field)" :let-side
                "(local a_0_ (or (getmetatable {}) {:b-c {}}))
                 (tset (. a_0_ :b-c) :d 12) (. a_0_ :b-c :d)" 12
-               "(local x (lua \"y = 4\" \"6\")) (* _G.y x)" 24}]
+               "(local x (lua \"y = 4\" \"6\")) (* _G.y x)" 24
+               ;; ensure that the over-zealous workaround for the
+               ;; (let [pairs #(pairs $)] pairs) bug doesn't affect normal code
+               "(type _G) (let [type :string] type)" :string}]
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
@@ -364,14 +371,10 @@
                "((require :fennel.view) \"ваыв\")"
                "\"ваыв\""
                "((require :fennel.view) {[1] [2 [3]] :ваыв {4 {:ваыв 5} 6 [0 1 2 3]}} {:line-length 15})"
-               (if _G.utf8
-                   "{\"ваыв\" [nil\n         nil\n         nil\n         {\"ваыв\" 5}\n         nil\n         [0\n          1\n          2\n          3]]\n [1] [2 [3]]}"
-                   "{\"ваыв\" [nil\n             nil\n             nil\n             {\"ваыв\" 5}\n             nil\n             [0\n              1\n              2\n              3]]\n [1] [2 [3]]}")
+               "{\"ваыв\" [nil\n         nil\n         nil\n         {\"ваыв\" 5}\n         nil\n         [0\n          1\n          2\n          3]]\n [1] [2 [3]]}"
                ;; the next one may look incorrect in some editors, but is actually correct
                "((require :fennel.view) {:ǍǍǍ {} :ƁƁƁ {:ǍǍǍ {} :ƁƁƁ {}}} {:line-length 1})"
-               (if _G.utf8 ; older versions of Lua can't indent this correctly
-                   "{\"ƁƁƁ\" {\"ƁƁƁ\" {}\n        \"ǍǍǍ\" {}}\n \"ǍǍǍ\" {}}"
-                   "{\"ƁƁƁ\" {\"ƁƁƁ\" {}\n           \"ǍǍǍ\" {}}\n \"ǍǍǍ\" {}}")
+               "{\"ƁƁƁ\" {\"ƁƁƁ\" {}\n        \"ǍǍǍ\" {}}\n \"ǍǍǍ\" {}}"
                ;; cycles
                "(local t1 {}) (tset t1 :t1 t1) ((require :fennel.view) t1)"
                "@1{:t1 @1{...}}"

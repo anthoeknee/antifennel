@@ -31,7 +31,7 @@ update-tests:
 	cp -r ../fennel/test .
 	echo "{}" > test/linter.fnl # don't bother
 	sed "s/: test-nest/;; : test-nest/" -i test/core.fnl # don't bother
-	sed "s/old.fennel/test.fennel/g" -i test/init.lua # bootstrap compiler moved
+	sed "s/bootstrap.fennel/test.fennel/g" -i test/init.lua # bootstrap compiler moved
 
 update-fennel: ../fennel/fennel.lua ../fennel/fennel
 	cp $^ .
