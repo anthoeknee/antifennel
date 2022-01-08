@@ -69,5 +69,15 @@
 (each [i ___match___ (ipairs {})]
   (noprint ___match___))
 
+(fn early-returns [some-var]
+  (when true
+    (let [___antifnl_rtn_1___ some-var]
+      (lua "return ___antifnl_rtn_1___")))
+  nil)
+
+(local early-result (early-returns :success))
+
+(assert (= early-result :success) early-result)
+
 (. (or (f123 :path) {}) :mode)
 

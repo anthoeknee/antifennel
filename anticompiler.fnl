@@ -1,4 +1,4 @@
-(local {: list : sym : sym? : view : sequence} (require :fennel))
+(local {: list : mangle : sym : sym? : view : sequence} (require :fennel))
 (local unpack (or table.unpack _G.unpack))
 
 (fn map [tbl f with-last?]
@@ -64,7 +64,7 @@
 (fn any-complex-expressions? [args i]
   (let [a (. args i)]
     (if (= nil a) false
-        (not (or (= a.kind "Identifier") (= a.kind "Literal"))) true
+        (not (or (= a.kind "Literal") (and (= a.kind "Identifier") (= a.name (mangle a.name))))) true
         (any-complex-expressions? args (+ i 1)))))
 
 (fn early-return-bindings [binding-names bindings i arg originals]

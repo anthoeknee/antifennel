@@ -66,4 +66,13 @@ for i, match in ipairs({}) do
    noprint(match)
 end
 
+
+local function earlyReturns(someVar)
+   if true then return someVar end
+   return nil
+end
+
+local earlyResult = earlyReturns("success")
+assert(earlyResult == "success", earlyResult)
+
 return (f123("path") or {}).mode
