@@ -1,6 +1,18 @@
 local fennel = require('fennel')
 debug.traceback = fennel.traceback
 
+-- our lexer was written for luajit; let's add a compatibility shim for PUC
+if(not pcall(require, "ffi")) then
+  package.loaded.ffi = {}
+  package.loaded.ffi.typeof = function()
+    return function() error("requires luajit") end
+  end
+  -- have to use load here since the parser will barf in luajit
+  local band = load("return function(a, b) return a & b end")()
+  local rshift = load("return function(a, b) return a >> b end")()
+  _G.bit = {band=band, rshift=rshift}
+end
+
 if os.getenv("FNL") then -- prefer Fennel to Lua when both exist
    table.insert(package.loaders or package.searchers, 1, fennel.searcher)
 else

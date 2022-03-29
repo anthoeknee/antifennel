@@ -8,13 +8,15 @@ see it in action on Fennel's web site without installing anything.
 
 ## Usage
 
-The only prerequisites are having LuaJIT and GNU Make installed.
+The only prerequisites are having Lua and GNU Make installed.
 
     $ make
     $ ./antifennel targetfile.lua > targetfile.fnl
 
 The `antifennel` script is self-contained and can be moved or
-symlinked onto your `$PATH`; all it requires to run is LuaJIT.
+symlinked onto your `$PATH`; all it requires to run is Lua. It will
+default to using `luajit` but you can run `make LUA=lua5.4` to
+override the Lua implementation.
 
 Or during development, run without building:
 
@@ -22,13 +24,12 @@ Or during development, run without building:
 
 ## Limitations
 
-Requires LuaJIT.
-
 The Antifennel compiler assumes its input file is valid Lua; it does
 not attempt to give good error messages when provided with files that
 won't parse.
 
-Antifennel will not emit variadic operators.
+Antifennel will never emit variadic operators, hashfns, or pattern
+matches, even in cases that would result in much better code.
 
 Fennel code does not support `goto`, so neither does Antifennel.
 
@@ -53,13 +54,9 @@ assignment in Fennel.
 Send patches directly to the maintainer or the
 [Fennel mailing list](https://lists.sr.ht/%7Etechnomancy/fennel)
 
-## TODO
-
-* Add support for non-LuaJIT
-
 ## Copyright
 
-Copyright © 2020-2021 Phil Hagelberg and contributors
+Copyright © 2020-2022 Phil Hagelberg and contributors
 Released under the MIT/X11 license, same as Fennel
 
 Lua parser/lexer (contents of the `lang/` directory) 

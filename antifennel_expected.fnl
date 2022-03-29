@@ -2,6 +2,16 @@
 
 (set debug.traceback fennel.traceback)
 
+(when (not (pcall require :ffi))
+  (set package.loaded.ffi {})
+  (set package.loaded.ffi.typeof
+       (fn []
+         (fn []
+           (error "requires luajit"))))
+  (local ___band___ ((load "return function(a, b) return a & b end")))
+  (local ___rshift___ ((load "return function(a, b) return a >> b end")))
+  (set _G.bit {:band ___band___ :rshift ___rshift___}))
+
 (if (os.getenv :FNL) (table.insert (or package.loaders package.searchers) 1
                                    fennel.searcher)
     (table.insert (or package.loaders package.searchers) fennel.searcher))

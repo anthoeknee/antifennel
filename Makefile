@@ -12,17 +12,19 @@ PARSER_FENNEL=lang/reader.fnl \
 		lang/lexer.fnl \
 		lang/parser.fnl
 
+LUA ?= luajit
+
 antifennel: antifennel.fnl anticompiler.fnl letter.fnl $(PARSER_FENNEL)
-	echo "#!/usr/bin/env luajit" > $@
-	luajit fennel --skip-include ffi --require-as-include --compile $< >> $@
+	echo "#!/usr/bin/env $(LUA)" > $@
+	$(LUA) fennel --skip-include ffi --require-as-include --compile $< >> $@
 	chmod 755 $@
 
 test: antifennel self test/fennel.lua
 	diff -u antifennel_expected.fnl antifennel.fnl
-	@luajit antifennel.lua test.lua > test.fnl
+	@$(LUA) antifennel.lua test.lua > test.fnl
 	diff -u test_expected.fnl test.fnl
-	luajit fennel --globals "*" test.fnl
-	luajit test/init.lua
+	$(LUA) fennel --globals "*" test.fnl
+	$(LUA) test/init.lua
 
 # We run the entire fennel test suite on the antifennel'd copy of Fennel.
 
@@ -43,15 +45,15 @@ update: update-fennel update-tests
 # many times your head spins.
 
 test/fennel.lua: fennel.lua anticompiler.fnl
-	luajit antifennel.lua fennel.lua | ./fennel --compile - > $@
+	$(LUA) antifennel.lua fennel.lua | ./fennel --compile - > $@
 
 antifennel.fnl: antifennel.lua
-	luajit antifennel.lua antifennel.lua > antifennel.fnl
+	$(LUA) antifennel.lua antifennel.lua > antifennel.fnl
 
 self: $(PARSER_FENNEL)
 
 lang/%.fnl: lang/%.lua anticompiler.fnl
-	luajit antifennel.lua $< > $@
+	$(LUA) antifennel.lua $< > $@
 
 clean: ; rm -f lang/*.fnl antifennel.fnl antifennel
 
