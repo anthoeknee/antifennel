@@ -10,7 +10,7 @@
            (error "requires luajit"))))
   (local ___band___ ((load "return function(a, b) return a & b end")))
   (local ___rshift___ ((load "return function(a, b) return a >> b end")))
-  (set _G.bit {:band ___band___ :rshift ___rshift___}))
+  (set _G.bit {:rshift ___rshift___ :band ___band___}))
 
 (if (os.getenv :FNL) (table.insert (or package.loaders package.searchers) 1
                                    fennel.searcher)

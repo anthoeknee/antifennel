@@ -1,3 +1,6 @@
+;; The name of this module is intended as a joke; this is in fact a compiler,
+;; not an "anticompiler" even tho it goes in reverse from the fennel compiler
+;; see http://nonadventures.com/2013/07/27/you-say-you-want-a-devolution/
 (local {: list : mangle : sym : sym? : view : sequence} (require :fennel))
 (local unpack (or table.unpack _G.unpack))
 

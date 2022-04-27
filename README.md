@@ -1,7 +1,7 @@
 # Antifennel
 
-Turn Lua code into Fennel code. Does the opposite of what the Fennel
-compiler does.
+Turn Lua code into Fennel code. This compiler does the opposite of
+what the Fennel compiler does.
 
 There is a [web-based demo](https://fennel-lang.org/see) where you can
 see it in action on Fennel's web site without installing anything.

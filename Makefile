@@ -16,14 +16,14 @@ LUA ?= luajit
 
 antifennel: antifennel.fnl anticompiler.fnl letter.fnl $(PARSER_FENNEL)
 	echo "#!/usr/bin/env $(LUA)" > $@
-	$(LUA) fennel --skip-include ffi --require-as-include --compile $< >> $@
+	$(LUA) ./fennel --skip-include ffi --require-as-include --compile $< >> $@
 	chmod 755 $@
 
 test: antifennel self test/fennel.lua
 	diff -u antifennel_expected.fnl antifennel.fnl
 	@$(LUA) antifennel.lua test.lua > test.fnl
 	diff -u test_expected.fnl test.fnl
-	$(LUA) fennel --globals "*" test.fnl
+	$(LUA) ./fennel --globals "*" test.fnl
 	$(LUA) test/init.lua
 
 # We run the entire fennel test suite on the antifennel'd copy of Fennel.
