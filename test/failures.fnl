@@ -2,6 +2,17 @@
 (local fennel (require :fennel))
 (local friend (require :fennel.friend))
 
+;; TODO: use this macro below where possible
+(macro assert-fail-msg [form expected]
+  `(let [(ok# msg#) (pcall fennel.compile-string (macrodebug ,form true)
+                           {:allowedGlobals (icollect [k# (pairs _G)] k#)})]
+     (l.assertFalse ok#)
+     (l.assertStrContains msg# ,expected)))
+
+(fn test-names []
+  (assert-fail-msg (local + 6) "overshadowed by a special form")
+  (assert-fail-msg (print each) "tried to reference a special form"))
+
 (fn test-failures [failures]
   (each [code expected-msg (pairs failures)]
     (let [(ok? msg) (pcall fennel.compileString code
@@ -14,12 +25,9 @@
   (test-failures
    {"(fn global [] 1)" "overshadowed"
     "(fn global-caller [] (hey))" "unknown identifier"
-    "(global + 1)" "overshadowed"
-    "(global - 1)" "overshadowed"
-    "(global // 1)" "overshadowed"
     "(global 48 :forty-eight)" "unable to bind number 48"
     "(global good (fn [] nil)) (good) (BAD)" "BAD"
-    "(global let 1)" "overshadowed"
+    "(global let 1)" "tried to reference a special form"
     "(hey)" "unknown identifier"
     "(let [bl 8 a bcd] nil)" "unknown identifier"
     "(let [global 1] 1)" "overshadowed"
@@ -41,7 +49,8 @@
     "(fn)" "expected parameters"
     "(lambda x)" "expected arg list"
     "(fn abc:def [x] (+ x 2))" "unexpected multi symbol abc:def"
-    "#[$ $...] 1 2 3" "$ and $... in hashfn are mutually exclusive"}))
+    "#[$ $...] 1 2 3" "$ and $... in hashfn are mutually exclusive"
+    "#(values ...)" "use $... in hashfn"}))
 
 (fn test-macro-fails []
   (test-failures
@@ -80,13 +89,13 @@
     "(let [x 1] (set-forcibly! x 2) (set x 3) x)" "expected var"
     "(let [x 1])" "expected body"
     "(local 47 :forty-seven)" "unable to bind number 47"
-    "(local a~b 3)" "illegal character: ~"
+    "(local a~b 3)" "invalid character: ~"
     "(local ipairs #(ipairs $))" "aliased by a local"
     "(set [a b c] [1 2 3]) (+ a b c)" "expected local"
     "(set a 19)" "error in 'a': expected local"
     "(set)" "Compile error in 'set': expected name and value"
     ;; TODO: this should be an error in 1.0
-    ;; "(local abc&d 19)" "illegal character: &"
+    "(local abc&d 19)" "invalid character: &"
 
     "(let [t []] (set t.47 :forty-seven))"
     "can't start multisym segment with a digit: t.47"
@@ -114,7 +123,7 @@
     "(f" "expected closing delimiter )"
     "(match [1 2 3] [a & b c] nil)" "rest argument before last parameter"
     "(not true false)" "expected one argument"
-    "(print @)" "illegal character: @"
+    "(print @)" "invalid character: @"
     "(x(y))" "expected whitespace before opening delimiter ("
     "(x[1 2])" "expected whitespace before opening delimiter ["
     "(eval-compiler (assert-compile false \"oh no\" 123))" "oh no"
@@ -122,7 +131,7 @@
     "(#)" "expected one argument"
     ;; PUC is ridiculous in what it accepts in a string
     "\"\\!\"" (if (or (not= _VERSION "Lua 5.1") _G.jit) "Invalid string")
-    "(match abc true false def)" "even number of pattern/body pairs"
+    "(match :hey true false def)" "even number of pattern/body pairs"
     ;; validity check on iterator clauses
     "(each [k (do-iter) :igloo 33] nil)" "unexpected iterator clause igloo"
     "(for [i 1 3 2 other-stuff] nil)" "unexpected arguments"
@@ -187,4 +196,5 @@
  : test-suggestions
  : test-macro
  : test-parse-fails
- : test-macro-traces}
+ : test-macro-traces
+ : test-names}

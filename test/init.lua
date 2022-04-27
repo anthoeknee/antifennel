@@ -32,7 +32,8 @@ local function testall(suites)
 end
 
 local suites = {"core", "mangling", "quoting", "bit", "fennelview", "parser",
-                "failures", "repl", "cli", "macro", "linter", "loops", "misc"}
+                "failures", "repl", "cli", "macro", "linter", "loops", "misc",
+                "searcher", "api"}
 
 if(#arg == 0) then
    local ok, err = pcall(testall, suites)
@@ -44,6 +45,6 @@ else
    testall(arg)
 end
 
-require("test.fennel").dofile("test/irc.fnl", {}, runner.result.notSuccessCount)
+dofile("test/irc.lua", runner.result.notSuccessCount)
 
 os.exit(runner.result.notSuccessCount == 0 and 0 or 1)

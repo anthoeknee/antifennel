@@ -2,6 +2,8 @@
 (local fennel (require :fennel))
 (local specials (require :fennel.specials))
 
+;; TODO: stop using code in strings here
+
 (fn wrap-repl [options]
   (var repl-complete nil)
   (fn send []
@@ -27,8 +29,10 @@
 (fn assert-equal-unordered [a b msg]
   (l.assertEquals (table.sort a) (table.sort b) msg))
 
-(fn test-local-completion []
-  (let [(send comp) (wrap-repl)]
+(fn test-sym-completion []
+  (let [(send comp) (wrap-repl {:env (collect [k v (pairs _G)] (values k v))})]
+    ;; if not deduped, causes a duplication error completing foo
+    (send "(global foo :DUPE)")
     (send "(local [foo foo-ba* moe-larry] [1 2 {:*curly* \"Why soitenly\"}])")
     (send "(local [!x-y !x_y] [1 2])")
     (assert-equal-unordered (comp "foo") ["foo" "foo-ba*"]
@@ -43,6 +47,15 @@
     (send "(local dynamic-index (setmetatable {:a 1 :b 2} {:__index #($2:upper)}))")
     (assert-equal-unordered (comp "dynamic-index.") [:dynamic-index.a :dynamic-index.b]
                             "completion doesn't error on table with a fn on mt.__index")
+    (send "(global global-is-nil nil) (tset _G :global-is-not-nil-unscoped :NOT-NIL)")
+    (assert-equal-unordered (comp :global-is-n) [:global-is-nil :global-not-nil-unscoped]
+                            "completion includes repl-scoped nil globals & unscoped non-nil globals")
+    (send "(local val-is-nil nil) (lua \"local val-is-nil-unscoped = nil\")")
+    (l.assertEquals (comp :val-is-ni) [:val-is-nil]
+                    "completion includes repl-scoped locals with nil values")
+    (send "(global shadowed-is-nil nil) (local shadowed-nil nil)")
+    (l.assertEquals (comp :shadowed-is-n) [:shadowed-is-nil]
+                    "completion includes repl-scoped shadowed variables only once")
     (let [(ok msg) (pcall send ",complete ]")]
       (l.assertTrue ok "shouldn't kill the repl on a parse error"))))
 
@@ -92,7 +105,19 @@
     (set dummy-module {:dummy :reloaded})
     (send ",reload dummy")
     (l.assertEquals :first-load dummy-first-contents)
-    (l.assertEquals :reloaded dummy.dummy)))
+    (l.assertEquals :reloaded dummy.dummy)
+    (l.assertStrContains (. (send ",reload lmao") 1)
+                         "module 'lmao' not found")))
+
+(fn test-reload-macros []
+  (let [send (wrap-repl)]
+    (tset fennel.macro-loaded :test/macros {:inc #(error :lol)})
+    (l.assertFalse (pcall fennel.eval
+                          "(import-macros m :test/macros) (m.inc 1)"))
+    (send ",reload test/macros")
+    (l.assertTrue (pcall fennel.eval
+                         "(import-macros m :test/macros) (m.inc 1)"))
+    (tset fennel.macro-loaded :test/macros nil)))
 
 (fn test-reset []
   (let [send (wrap-repl)
@@ -192,8 +217,10 @@
     (l.assertEquals (send "xyz") [:55])))
 
 (local doc-cases
-       [[",doc doto" "(doto val ...)\n  Evaluates val and splices it into the first argument of subsequent forms." "docstrings for built-in macros" ]
+       [[",doc doto" "(doto val ...)\n  Evaluate val and splice it into the first argument of subsequent forms." "docstrings for built-in macros" ]
         [",doc table.concat"  "(table.concat #<unknown-arguments>)\n  #<undocumented>" "docstrings for built-in Lua functions" ]
+        [",doc foo.bar" "error: Could not resolve value for docstring lookup"]
+        [",doc (bork)" "error: Could not resolve value for docstring lookup"]
         ;; ["(fn ew [] \"so \\\"gross\\\" \\\\\\\"I\\\\\\\" can't even\" 1) ,doc ew"  "(ew)\n  so \"gross\" \\\"I\\\" can't even" "docstrings should be auto-escaped" ]
         ["(fn foo [a] :C 1) ,doc foo"  "(foo a)\n  C" "for named functions, doc shows name, args invocation, docstring" ]
         ["(fn foo! [-kebab- {:x x}] 1) ,doc foo!"  "(foo! -kebab- {:x x})\n  #<undocumented>" "fn-name and args pretty-printing" ]
@@ -205,7 +232,8 @@
         ["(local fennel (require :fennel)) (local {: generate} (fennel.dofile \"test/generate.fnl\" {:useMetadata true})) ,doc generate"  "(generate depth ?choice)\n  Generate a random piece of data." "docstrings from required module." ]
         ["(macro abc [x y z] \"this is a macro.\" :123) ,doc abc"  "(abc x y z)\n  this is a macro." "docstrings for user-defined macros" ]
         ["(macro ten [] \"[ten]\" 10) ,doc ten" "(ten)\n  [ten]" "macro docstrings with brackets"]
-        ["(λ foo [] :D 1) ,doc foo"  "(foo)\n  D" ",doc fnname for named lambdas appear like named functions" ]])
+        ["(λ foo [] :D 1) ,doc foo"  "(foo)\n  D" ",doc fnname for named lambdas appear like named functions" ]
+        ["(fn foo [...] {:fnl/arglist [a b c] :fnl/docstring \"D\"} 1) ,doc foo"  "(foo a b c)\n  D" ",doc arglist should be taken from function metadata table" ]])
 
 (fn test-docstrings []
   (let [send (wrap-repl)]
@@ -228,12 +256,13 @@
 ;; this case the feature will work fine; we just can't use this method of
 ;; testing it on PUC 5.1, so skip it.
 (if (or (not= _VERSION "Lua 5.1") (= (type _G.jit) "table"))
-    {: test-local-completion
+    {: test-sym-completion
      : test-macro-completion
      : test-method-completion
      : test-help
      : test-exit
      : test-reload
+     : test-reload-macros
      : test-reset
      : test-plugins
      : test-options
