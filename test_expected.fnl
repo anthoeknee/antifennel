@@ -79,6 +79,17 @@
 
 (assert (= early-result :success) early-result)
 
+(for [outer 1 10]
+  (for [inner 1 10 2]
+    (noprint outer inner)))
+
+(fn dynamic-step []
+  3)
+
+(for [dynamic 1 2 (dynamic-step)]
+  (for [unnecessary-step 1 10]
+    (noprint dynamic unnecessary-step)))
+
 (print {1 1 2 2 :a 3})
 
 (. (or (f123 :path) [:a :b :c]) :mode)

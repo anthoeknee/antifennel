@@ -75,6 +75,23 @@ end
 local earlyResult = earlyReturns("success")
 assert(earlyResult == "success", earlyResult)
 
+
+for outer = 1, 10 do
+    for inner = 1, 10, 2 do
+        noprint(outer, inner)
+    end
+end
+
+local function dynamic_step()
+    return 3
+end
+
+for dynamic = 1, 2, dynamic_step() do
+    for unnecessary_step = 1, 10, 1 do
+        noprint(dynamic, unnecessary_step)
+    end
+end
+
 print({1, 2, a=3})
 
 return (f123("path") or {"a", "b", "c"}).mode
