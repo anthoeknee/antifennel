@@ -245,10 +245,13 @@
           (unpack (map body (partial compile subscope))))))
 
 (fn table* [compile scope {: keyvals}]
-  (let [out {}]
+  (let [out (if (next keyvals)
+                (sequence)
+                {})]
     (each [_ [v k] (pairs keyvals)]
       (if k
-          (tset out (compile scope k) (compile scope v))
+          (do (tset out (compile scope k) (compile scope v))
+              (setmetatable out nil))
           (table.insert out (compile scope v))))
     out))
 

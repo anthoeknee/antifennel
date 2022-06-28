@@ -75,4 +75,6 @@ end
 local earlyResult = earlyReturns("success")
 assert(earlyResult == "success", earlyResult)
 
-return (f123("path") or {}).mode
+print({1, 2, a=3})
+
+return (f123("path") or {"a", "b", "c"}).mode

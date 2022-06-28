@@ -2,6 +2,7 @@
 
 ## 0.2.0 / ???
 
+* Fix a bug where sequences were emitted with curly brackets.
 * Use version 0.2.1 of fnlfmt.
 * Emit method calls as foo:bar where appropriate.
 * Upgrade to Fennel 0.8.2-dev.

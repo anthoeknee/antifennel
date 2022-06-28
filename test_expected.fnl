@@ -79,5 +79,7 @@
 
 (assert (= early-result :success) early-result)
 
-(. (or (f123 :path) {}) :mode)
+(print {1 1 2 2 :a 3})
+
+(. (or (f123 :path) [:a :b :c]) :mode)
 
