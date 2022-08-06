@@ -34,7 +34,34 @@ matches, even in cases that would result in much better code.
 Fennel code does not support `goto`, so neither does Antifennel.
 
 Early returns will compile to very ugly Fennel code, but they should
-be correct.
+be correct. If you want better output, consider changing the Lua code
+to remove early returns before running Antifennel on it; for instance
+here:
+
+```lua
+local function f(x)
+  if x:skip() then
+    return x:done()
+  end
+  x:process()
+  print(x, x.context)
+end
+```
+
+... would be better as:
+
+```lua
+local function f(x)
+  if x:skip() then
+    return x:done()
+  else
+    x:process()
+    print(x, x.context)
+  end
+end
+```
+
+This is not required, but it will result in much nicer-looking code.
 
 Multiple value assignment doesn't work if setting table keys that
 aren't static. For instance, this is OK:
