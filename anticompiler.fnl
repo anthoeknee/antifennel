@@ -11,6 +11,13 @@
       (table.insert out (f v (and with-last? (= i len)))))
     out))
 
+(fn distinct [tbl]
+  (let [seen {}]
+    (icollect [_ x (ipairs tbl)]
+      (when (not (. seen x))
+        (tset seen x true)
+        x))))
+
 (fn p [x] (print (view x))) ; debugging
 
 (fn make-scope [parent]
@@ -201,7 +208,8 @@
   true)
 
 (fn setter-for [scope names]
-  (let [kinds (map names #(match (or (. scope $) $) {: kind} kind _ :global))]
+  (let [kinds (map names #(match (or (. scope $) $) {: kind} kind _ :global))
+        kinds (distinct kinds)]
     (match kinds
       (_ ? (< 1 (length kinds))) :set-forcibly!
       [:local] (do (map names (partial varize-local! scope))
@@ -221,7 +229,6 @@
                             (unpack (map right (partial compile scope)))))]
     (if (any-computed? (. left 1))
         (tset* compile scope left right-out ast)
-        ;; TODO: detect table sets
         (let [setter (setter-for scope (map left #(or $.name $)))]
           (list (sym setter)
                 (if (= 1 (length left))
