@@ -35,6 +35,11 @@
             (compile scope ast.id)
             (function compile scope ast))))
 
+(fn identifier [ast]
+  (if (and (ast.name:find "^[-_0-9]+$") (ast.name:find "[0-9]"))
+      (sym (.. "/" ast.name))
+      (sym ast.name)))
+
 (fn local-declaration [compile scope {: names : expressions}]
   (if (and (= (# expressions) (# names) 1)
            (= :FunctionExpression (. expressions 1 :kind)))
@@ -47,7 +52,7 @@
         (add-to-scope scope :local (map names #$.name) local-sym)
         (list local-sym
               (if (= 1 (# names))
-                  (sym (. names 1 :name))
+                  (identifier (. names 1))
                   (list (unpack (map names (partial compile scope)))))
               (if (= 1 (# expressions))
                   (compile scope (. expressions 1))
@@ -300,7 +305,7 @@
                           (vals compile scope ast)
                           (early-return compile scope ast))
 
-    "Identifier" (sym ast.name)
+    "Identifier" (identifier ast)
     "Table" (table* compile scope ast)
     "Literal" (if (= nil ast.value) (sym :nil) ast.value)
     "Vararg" (sym "...")
