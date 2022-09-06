@@ -5,7 +5,7 @@
 (local unpack (or table.unpack _G.unpack))
 
 (fn map [tbl f with-last?]
-  (let [len (# tbl)
+  (let [len (length tbl)
         out []]
     (each [i v (ipairs tbl)]
       (table.insert out (f v (and with-last? (= i len)))))
@@ -41,7 +41,7 @@
       (sym ast.name)))
 
 (fn local-declaration [compile scope {: names : expressions}]
-  (if (and (= (# expressions) (# names) 1)
+  (if (and (= (length expressions) (length names) 1)
            (= :FunctionExpression (. expressions 1 :kind)))
       ;; check for local f = funnction declaration; compile that to (fn f []...)
       (do (add-to-scope scope :function [(. names 1 :name)])
@@ -51,28 +51,29 @@
       (let [local-sym (sym :local)]
         (add-to-scope scope :local (map names #$.name) local-sym)
         (list local-sym
-              (if (= 1 (# names))
+              (if (= 1 (length names))
                   (identifier (. names 1))
                   (list (unpack (map names (partial compile scope)))))
-              (if (= 1 (# expressions))
+              (if (= 1 (length expressions))
                   (compile scope (. expressions 1))
-                  (= 0 (# expressions))
+                  (= 0 (length expressions))
                   (sym :nil)
                   (list (sym :values)
                         (unpack (map expressions
                                      (partial compile scope)))))))))
 
 (fn vals [compile scope {: arguments}]
-  (if (= 1 (# arguments))
+  (if (= 1 (length arguments))
       (compile scope (. arguments 1))
-      (= 0 (# arguments))
+      (= 0 (length arguments))
       (sym :nil)
       (list (sym :values) (unpack (map arguments (partial compile scope))))))
 
 (fn any-complex-expressions? [args i]
   (let [a (. args i)]
     (if (= nil a) false
-        (not (or (= a.kind "Literal") (and (= a.kind "Identifier") (= a.name (mangle a.name))))) true
+        (not (or (= a.kind "Literal")
+                 (and (= a.kind "Identifier") (= a.name (mangle a.name))))) true
         (any-complex-expressions? args (+ i 1)))))
 
 (fn early-return-bindings [binding-names bindings i arg originals]
@@ -143,10 +144,10 @@
 
 (fn if* [compile scope {: tests : cons : alternate} tail?]
   (each [_ v (ipairs cons)]
-    (when (= 0 (# v)) ; check for empty consequent branches
+    (when (= 0 (length v)) ; check for empty consequent branches
       (table.insert v (sym :nil))))
   (let [subscope (make-scope scope)]
-    (if (and (not alternate) (= 1 (# tests)))
+    (if (and (not alternate) (= 1 (length tests)))
         (list (sym :when)
               (compile scope (. tests 1))
               (unpack (map (. cons 1) (partial compile subscope) tail?)))
@@ -154,13 +155,13 @@
           (each [i test (ipairs tests)]
             (table.insert out (compile scope test))
             (let [c (. cons i)]
-              (table.insert out (if (= 1 (# c))
+              (table.insert out (if (= 1 (length c))
                                     (compile subscope (. c 1) tail?)
                                     (list (sym :do)
                                           (unpack (map c (partial compile subscope)
                                                        tail?)))))))
           (when alternate
-            (table.insert out (if (= 1 (# alternate))
+            (table.insert out (if (= 1 (length alternate))
                                   (compile subscope (. alternate 1) tail?)
                                   (list (sym :do)
                                         (unpack (map alternate
@@ -183,7 +184,7 @@
           (unpack (map body (partial compile subscope))))))
 
 (fn tset* [compile scope left right-out ast]
-  (when (< 1 (# left))
+  (when (< 1 (length left))
     (error (.. "Unsupported form; tset cannot set multiple values on line "
                (or ast.line "?"))))
   (list (sym :tset)
@@ -202,7 +203,7 @@
 (fn setter-for [scope names]
   (let [kinds (map names #(match (or (. scope $) $) {: kind} kind _ :global))]
     (match kinds
-      (_ ? (< 1 (# kinds))) :set-forcibly!
+      (_ ? (< 1 (length kinds))) :set-forcibly!
       [:local] (do (map names (partial varize-local! scope))
                    :set)
       [:MemberExpression] :set
@@ -212,9 +213,9 @@
 
 (fn assignment [compile scope ast]
   (let [{: left : right} ast
-        right-out (if (= 1 (# right))
+        right-out (if (= 1 (length right))
                       (compile scope (. right 1))
-                      (= 0 (# right))
+                      (= 0 (length right))
                       (sym :nil)
                       (list (sym :values)
                             (unpack (map right (partial compile scope)))))]
@@ -223,7 +224,7 @@
         ;; TODO: detect table sets
         (let [setter (setter-for scope (map left #(or $.name $)))]
           (list (sym setter)
-                (if (= 1 (# left))
+                (if (= 1 (length left))
                     (compile scope (. left 1))
                     (list (unpack (map left (partial compile scope)))))
                 right-out)))))
