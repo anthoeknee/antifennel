@@ -8,7 +8,8 @@
   (var repl-complete nil)
   (fn send []
     (var output [])
-    (let [opts (or options {})]
+    (let [opts (collect [k v (pairs (or options {})) :into {:useMetadata true}]
+                 (values k v))]
       (fn opts.readChunk []
         (let [chunk (coroutine.yield output)]
           (set output [])
@@ -184,7 +185,7 @@
     (l.assertEquals out out2 "lines and byte offsets should be stable")
     (l.assertStrContains out ":bytestart 5")
     (l.assertStrContains out ":byteend 7")
-    (l.assertStrContains out3 "   (f [123])\n      ^^^^^")))
+    (l.assertStrContains out3 "   (f \027[7m[123]\027[0m)")))
 
 (fn test-code []
   (let [(send comp) (wrap-repl)]
@@ -193,16 +194,18 @@
     (l.assertEquals (send "(foo)") [:foo])
     (l.assertEquals (comp "fo") [:for :foo])))
 
-(fn test-source-offset []
+(fn test-error-handling []
   (let [(send comp) (wrap-repl)]
     ;; we get the source in the error message
-    (l.assertStrContains (. (send "(let a)") 1) "(let a)\n     ^")
+    (l.assertStrContains (. (send "(let a)") 1) "(let \027")
     ;; repeated errors still get it
-    (l.assertStrContains (. (send "(let b)") 1) "(let b)\n     ^")
+    (l.assertStrContains (. (send "(let b)") 1) "(let \027")
     (set _G.dbg true)
     ;; repl commands don't mess it up
     (send ",complete l")
-    (l.assertStrContains (. (send "(let c)") 1) "(let c)\n     ^")))
+    (l.assertStrContains (. (send "(let c)") 1) "(let \027")
+    ;; parser errors should be properly displayed, albeit without ^ at position
+    (l.assertStrContains (. (send "(print @)") 1) "invalid character: @")))
 
 (fn test-locals-saving []
   (let [(send comp) (wrap-repl)]
@@ -233,10 +236,13 @@
         ["(macro abc [x y z] \"this is a macro.\" :123) ,doc abc"  "(abc x y z)\n  this is a macro." "docstrings for user-defined macros" ]
         ["(macro ten [] \"[ten]\" 10) ,doc ten" "(ten)\n  [ten]" "macro docstrings with brackets"]
         ["(λ foo [] :D 1) ,doc foo"  "(foo)\n  D" ",doc fnname for named lambdas appear like named functions" ]
-        ["(fn foo [...] {:fnl/arglist [a b c] :fnl/docstring \"D\"} 1) ,doc foo"  "(foo a b c)\n  D" ",doc arglist should be taken from function metadata table" ]])
+        ["(fn foo [...] {:fnl/arglist [a b c] :fnl/docstring \"D\"} 1) ,doc foo"  "(foo a b c)\n  D" ",doc arglist should be taken from function metadata table" ]
+        [",doc macro-doesnt-exist" "macro-doesnt-exist not found" ",doc should report when failing to look up a sym"]
+        ["(import-macros m :test.macros) ,doc m.inc" "(m.inc n)\n  Increments n by 1" ",doc should work on macro tables"]])
 
 (fn test-docstrings []
   (let [send (wrap-repl)]
+    (tset fennel.macro-loaded :test.macros nil)
     (each [_ [code expected msg] (ipairs doc-cases)]
       (l.assertEquals (table.concat (send code)) expected msg))))
 
@@ -268,7 +274,7 @@
      : test-options
      : test-apropos
      : test-byteoffset
-     : test-source-offset
+     : test-error-handling
      : test-code
      : test-locals-saving
      : test-docstrings

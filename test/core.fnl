@@ -1,5 +1,6 @@
 (local l (require :test.luaunit))
 (local fennel (require :fennel))
+(local compiler (require :fennel.compiler))
 
 ;; TODO: use == macro; remove code as strings
 
@@ -225,7 +226,9 @@
                "(let [({: x} y) (values {:x 10} 20)] (+ x y))" 30
                "(let [[a & b] (setmetatable {} {:__fennelrest #42})] b)" 42
                "(let [[a & b] (setmetatable {} {:__fennelrest #false})] b)" false
-               "(let [[a & b] (setmetatable [1 2 3 4 5] {:__fennelrest (fn [t k] [((or table.unpack _G.unpack) t (+ k 1))])})] b)" [3 4 5]}]
+               "(let [[a & b] (setmetatable [1 2 3 4 5] {:__fennelrest (fn [t k] [((or table.unpack _G.unpack) t (+ k 1))])})] b)" [3 4 5]
+               "(let [{: a & r} {:a 1 :b 2}] r)" {:b 2}
+               "(let [{: a & r} {:a 1 :b 2}] a)" 1}]
     (each [code expected (pairs cases)]
       (l.assertEquals (fennel.eval code {:correlate true}) expected code))))
 
@@ -467,14 +470,18 @@
       (l.assertEquals (fennel.view mt) "META"))))
 
 (fn test-comment []
-  (l.assertEquals "--[[ hello world ]]--\nreturn nil"
+  (l.assertEquals "--[[ hello world ]]\nreturn nil"
                   (fennel.compile-string "(comment hello world)"))
-  (l.assertEquals "--[[ \"hello\nworld\" ]]--\nreturn nil"
+  (l.assertEquals "--[[ \"hello\nworld\" ]]\nreturn nil"
                   (fennel.compile-string "(comment \"hello\nworld\")")))
 
 (fn test-nest []
   (let [nested (fennel.dofile "src/fennel.fnl" {:compilerEnv _G})]
     (l.assertEquals fennel.version nested.version)))
+
+(fn test-sym []
+  (l.assertEquals "f_1_auto.foo:bar"
+                  (eval-compiler (string.format "%q" (view `f#.foo:bar)))))
 
 {: test-booleans
  : test-calculations
@@ -491,4 +498,5 @@
  : test-method-calls
  : test-comment
  ;; : test-nest
+ : test-sym
 }

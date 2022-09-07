@@ -38,6 +38,7 @@
     ;; strict mode applies to macro modules too
     "(import-macros t :test.bad.unknown-global)" "unknown identifier in strict mode"}))
 
+
 (fn test-fn-fails []
   (test-failures
    {"(fn [12])" "expected symbol for function parameter"
@@ -70,13 +71,15 @@
     "(let [t {:b 2}] (import-macros t :test.macros) t.b)"
     "tried to reference a macro"
     "(import-macros {: asdf} :test.macros)"
-    "macro asdf not found in module test.macros"}))
+    "macro asdf not found in module test.macros"
+    "(import-macros m :test.bad.macro-no-return-table)"
+    "expected macros to be table"}))
 
 (fn test-binding-fails []
   (test-failures
    {"(let [:x 1] 1)" "unable to bind"
     "(let [[a & c d] [1 2]] c)" "rest argument before last parameter"
-    "(let [b 9\nq (.)] q)" "unknown:2: Compile error in '.': expected table"
+    "(let [b 9\nq (.)] q)" "unknown:2:2 Compile error in '.': expected table"
     "(let [false 1] 9)" "unable to bind boolean false"
     "(let [next #(next $)] print)" "aliased by a local"
     "(let [nil 1] 9)" "unable to bind"
@@ -94,31 +97,30 @@
     "(set [a b c] [1 2 3]) (+ a b c)" "expected local"
     "(set a 19)" "error in 'a': expected local"
     "(set)" "Compile error in 'set': expected name and value"
-    ;; TODO: this should be an error in 1.0
     "(local abc&d 19)" "invalid character: &"
-
     "(let [t []] (set t.47 :forty-seven))"
     "can't start multisym segment with a digit: t.47"
     "(let [x {:foo (fn [self] self.bar) :bar :baz}] x:foo)"
     "multisym method calls may only be in call position"
     "(let [x {:y {:foo (fn [self] self.bar) :bar :baz}}] x:y:foo)"
     "method must be last component of multisym: x:y:foo"
-    "(set abc:def 2)" "cannot set method sym"}))
+    "(set abc:def 2)" "cannot set method sym"
+    "(local () 1)" "at least one value"}))
 
 (fn test-parse-fails []
   (test-failures
-   {"\n\n(+))" "unknown:3: Parse error: unexpected closing delimiter )"
+   {"\n\n(+))" "unknown:3:3 Parse error: unexpected closing delimiter )"
     "(foo:)" "malformed multisym"
     "(foo.bar:)" "malformed multisym"}))
 
 (fn test-core-fails []
   (test-failures
-   {"\n\n(let [f (lambda []\n(local))] (f))" "unknown:4: "
-    "\n\n(let [x.y 9] nil)" "unknown:3: Compile error in 'let': unexpected multi"
-    "\n(when)" "unknown:2: Compile error in 'when'"
+   {"\n\n(let [f (lambda []\n(local))] (f))" "unknown:4:0 "
+    "\n\n(let [x.y 9] nil)" "unknown:3:0 Compile error in 'let': unexpected multi"
+    "\n(when)" "unknown:2:0 Compile error in 'when'"
     "()" "expected a function, macro, or special"
     "(789)" "cannot call literal value"
-    "(do\n\n\n(each \n[x (pairs {})] (when)))" "unknown:5: "
+    "(do\n\n\n(each \n[x (pairs {})] (when)))" "unknown:5:15 "
     "(each [k v (pairs {})] (BAD k v))" "BAD"
     "(f" "expected closing delimiter )"
     "(match [1 2 3] [a & b c] nil)" "rest argument before last parameter"
@@ -132,13 +134,17 @@
     ;; PUC is ridiculous in what it accepts in a string
     "\"\\!\"" (if (or (not= _VERSION "Lua 5.1") _G.jit) "Invalid string")
     "(match :hey true false def)" "even number of pattern/body pairs"
+    "(match :hey)" "at least one pattern/body pair"
+    "(match)" "missing subject"
+    "(doto)" "missing subject"
     ;; validity check on iterator clauses
     "(each [k (do-iter) :igloo 33] nil)" "unexpected iterator clause igloo"
     "(for [i 1 3 2 other-stuff] nil)" "unexpected arguments"
     "(do\n\n\n(each \n[x 34 (pairs {})] 21))"
-    "unknown:5: Compile error in 'x': unable to bind number 34"
+    "unknown:5:0 Compile error in 'x': unable to bind number 34"
     "(with-open [(x y z) (values 1 2 3)])"
-    "with-open only allows symbols in bindings"}))
+    "with-open only allows symbols in bindings"
+    "([])" "cannot call literal value table"}))
 
 (fn test-macro []
   (let [code "(import-macros {: fail-one} :test.macros) (fail-one 1)"
@@ -151,6 +157,8 @@
     (l.assertFalse ok?)
     (l.assertStrMatches msg ".*module name must compile to string.*")))
 
+(fn no-codes [s] (s:gsub "\027%[[0-9]m" ""))
+
 ;; automated tests for suggestions are rudimentary because the usefulness of the
 ;; output is so subjective. to see a full catalog of suggestions, run the script
 ;; test/bad/friendly.sh and review that output.
@@ -160,33 +168,46 @@
         (_ assert-msg) (pcall fennel.eval
                               "(eval-compiler (assert-compile nil \"bad\" 1))")
         (_ msg4) (pcall fennel.eval "(abc] ;; msg4")
-        (_ msg5) (pcall fennel.eval "(let {:a 1}) ;; msg5")]
+        (_ msg5) (pcall fennel.eval "(let {:a 1}) ;; msg5")
+        (_ msg6) (pcall fennel.eval "(for [:abc \n \"def t\"] nil)")
+        (_ msg7) (pcall fennel.eval "(match) ;; msg7")]
     ;; show the raw error message
     (l.assertStrContains msg "expected var x")
     ;; offer suggestions
     (l.assertStrContains msg "Try declaring x using var")
     ;; show the code and point out the identifier at fault
-    (l.assertStrContains msg "(set x 3)")
-    (l.assertStrContains msg "\n     ^")
+    (l.assertStrContains (no-codes msg) "(set x 3)")
     ;; parse error
-    (l.assertStrContains parse-msg "{:a 1 :b 2 :c}")
+    (l.assertStrContains (no-codes parse-msg) "{:a 1 :b 2 :c}")
     ;; non-table AST in assertion
     (l.assertStrContains assert-msg "bad")
     ;; source should be part of the error message
     (l.assertStrContains msg4 "msg4")
-    (l.assertStrContains msg5 "msg5")))
+    (l.assertStrContains msg5 "msg5")
+    (l.assertStrContains msg6 "unable to bind string abc")
+    (l.assertStrContains msg7 "msg7")))
 
-(fn doer [ast]
-  (friend.assert-compile false "bad news" ast))
+(fn doer []
+  ;; this plugin does not detach in subsequent tests, so we must check that
+  ;; it only fires once, exactly for our specific test.
+  ;; https://github.com/bakpakin/Fennel/pull/427#issuecomment-1138286136
+  (var fired-once false)
+  (fn [ast]
+    (when (not fired-once)
+      (set fired-once true)
+      (friend.assert-compile false "test-macro-traces plugin failed successfully" ast))))
 
 (fn test-macro-traces []
   ;; we want to trigger an error from inside a built-in macro and make sure we
   ;; don't get built-in macro trace info in the error messages.
   (let [(_ err) (pcall fennel.eval "\n\n(match 5 b (print 5))"
-                       {:plugins [{:do doer
+                       {:plugins [{:plugin-from :test-macro-traces
+                                   :do (doer)
                                    :versions [(fennel.version:gsub "-dev" "")]}]
                         :filename "matcher.fnl"})]
-    (l.assertStrContains err "matcher.fnl:3")))
+    (l.assertStrContains err "matcher.fnl:3"))
+  (let [(_ err) (pcall fennel.eval "(match 5 b)")]
+    (l.assertNotStrContains err "fennel.compiler.macroexpand")))
 
 {: test-global-fails
  : test-fn-fails

@@ -17,6 +17,7 @@
   :macro-searchers "table"
   :make-searcher   "function"
   :metadata        "table"
+  :multi-sym?      "function"
   :parser          "function"
   :path            "string"
   :repl            "function"
@@ -33,7 +34,8 @@
   :varg            "function"
   :varg?           "function"
   :version         "string"
-  :view            "function"})
+  :view            "function"
+  :ast-source      "function"})
 
 (local expected-aliases {
   :compileStream  "function"
