@@ -45,7 +45,8 @@ update: update-fennel update-tests
 # many times your head spins.
 
 test/fennel.lua: fennel.lua anticompiler.fnl
-	$(LUA) antifennel.lua fennel.lua | ./fennel --compile - > $@
+	$(LUA) antifennel.lua fennel.lua > tmp-fennel.fnl
+	./fennel --compile tmp-fennel.fnl > $@
 
 antifennel.fnl: antifennel.lua
 	$(LUA) antifennel.lua antifennel.lua > antifennel.fnl
