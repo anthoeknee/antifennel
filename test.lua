@@ -94,4 +94,7 @@ end
 
 print({1, 2, a=3})
 
+local chr, src = "", {}
+chr, src.line, src["from-macro?"] = filename, line, true
+
 return (f123("path") or {"a", "b", "c"}).mode

@@ -1,7 +1,8 @@
 ;; The name of this module is intended as a joke; this is in fact a compiler,
 ;; not an "anticompiler" even tho it goes in reverse from the fennel compiler
 ;; see http://nonadventures.com/2013/07/27/you-say-you-want-a-devolution/
-(local {: list : mangle : sym : sym? : view : sequence} (require :fennel))
+(local {: list : mangle : sym : sym? : view : sequence : multi-sym? : sym-char?}
+       (require :fennel))
 (local unpack (or table.unpack _G.unpack))
 
 (fn map [tbl f with-last?]
@@ -204,13 +205,16 @@
         right-out))
 
 (fn varize-local! [scope name]
-  (tset (. scope name :ast) 1 :var)
-  true)
+  (match (. scope name)
+    {: ast} (tset ast 1 :var)))
 
 (fn setter-for [scope names]
   (let [kinds (map names #(match (or (. scope $) $) {: kind} kind _ :global))
-        kinds (distinct kinds)]
+        kinds (doto (distinct kinds) table.sort)]
     (match kinds
+      ;; this is the only combination which we can use regular set on:
+      [:MemberExpression :local] (do (map names (partial varize-local! scope))
+                                     :set)
       (_ ? (< 1 (length kinds))) :set-forcibly!
       [:local] (do (map names (partial varize-local! scope))
                    :set)
@@ -218,6 +222,19 @@
       [:function] :set-forcibly!
       [:param] :set-forcibly!
       _ :global)))
+
+;; sometimes (set foo.x-y? true) gets converted into a computed foo["x-y?"]
+;; the latter would be fine to compile to dot special as an access, but as an
+;; assignment target it's unusable, so we have to convert back to a multisym.
+(fn computed->multisym! [target]
+  (when target.computed
+    (match target.property
+      {:kind :Literal : value} (each [char (value:gmatch ".")]
+                                 (assert (sym-char? char)
+                                         (.. "Illegal assignment: " value)))
+      {: kind} (error (.. "Cannot assign to " kind)))
+    (set target.computed false)
+    (set target.property {:Kind :Identifier :name target.property.value})))
 
 (fn assignment [compile scope ast]
   (let [{: left : right} ast
@@ -230,6 +247,7 @@
     (if (any-computed? (. left 1))
         (tset* compile scope left right-out ast)
         (let [setter (setter-for scope (map left #(or $.name $)))]
+          (map left computed->multisym!)
           (list (sym setter)
                 (if (= 1 (length left))
                     (compile scope (. left 1))

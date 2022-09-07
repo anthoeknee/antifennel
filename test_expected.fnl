@@ -46,9 +46,9 @@
             (let [x 1]
               x))))
 
-(fn f123 [_1]
-  (let [_0 :zero]
-    (noprint (.. _0 _1))
+(fn f123 [/_1]
+  (let [/_0 :zero]
+    (noprint (.. /_0 /_1))
     (values {} 2 3)))
 
 (fn bcd [...]
@@ -91,6 +91,10 @@
     (noprint dynamic unnecessary-step)))
 
 (print {1 1 2 2 :a 3})
+
+(var (chr src) (values "" {}))
+
+(set (chr src.line src.from-macro?) (values filename line true))
 
 (. (or (f123 :path) [:a :b :c]) :mode)
 
