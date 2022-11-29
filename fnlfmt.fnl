@@ -7,6 +7,8 @@
 ;; tables which improve on fennel.view's existing logic of how to indent and
 ;; where to place newlines.
 
+(local syntax (fennel.syntax))
+
 (fn last-line-length [line]
   (length (line:match "[^\n]*$")))
 
@@ -83,13 +85,6 @@ We want everything to be on one line as much as possible, (except for let)."
     (table.insert out close)
     (table.concat out)))
 
-(local init-bindings {:collect true
-                      :each true
-                      :for true
-                      :icollect true
-                      :let true
-                      :with-open true})
-
 (local fn-forms {:fn true :lambda true "λ" true :macro true})
 
 (local force-initial-newline {:do true :eval-compiler true})
@@ -103,7 +98,7 @@ number of handled arguments."
   (let [indent (if (. force-initial-newline callee)
                    start-indent
                    (+ start-indent (length callee)))
-        second (if (and (. init-bindings callee)
+        second (if (and (?. syntax callee :binding-form?)
                         (not= :unquote (tostring (. t 2 1))))
                    (view-binding (. t 2) view inspector (+ indent 1)
                                  (= :let callee) "[" "]")
@@ -220,22 +215,6 @@ number of handled arguments."
 (fn sweeten [t view inspector indent view-list]
   (.. (. sugars (tostring (. t 1))) (view (. t 2) inspector (+ indent 1))))
 
-(local body-specials {:collect true
-                      :do true
-                      :each true
-                      :eval-compiler true
-                      :fn true
-                      :for true
-                      :icollect true
-                      :lambda true
-                      :let true
-                      :macro true
-                      :match true
-                      :when true
-                      :while true
-                      :with-open true
-                      "λ" true})
-
 (local maybe-body {:-> true :->> true :-?> true :-?>> true :doto true :if true})
 
 (local renames {"#" :length "~=" :not=})
@@ -246,11 +225,11 @@ number of handled arguments."
       (let [callee (view (. t 1) inspector (+ start-indent 1))
             callee (or (. renames callee) callee)
             out ["(" callee]
-            indent (if (. body-specials callee)
+            indent (if (?. syntax callee :body-form?)
                        (+ start-indent 2)
                        (+ start-indent (length callee) 2))]
         ;; indent differently if it's calling a special form with body args
-        (if (. body-specials callee)
+        (if (?. syntax callee :body-form?)
             (view-body t view inspector indent out callee)
             ;; in some cases we treat it differently depending on whether the
             ;; original code was multi-line or not
@@ -263,9 +242,12 @@ number of handled arguments."
 
 (local slength (or (-?> (rawget _G :utf8) (. :len)) #(length $)))
 
-(fn maybe-attach-comment [x indent c]
-  (if c
-      (.. (tostring c) "\n" (string.rep " " indent) x)
+(fn maybe-attach-comment [x indent cs]
+  (if (and cs (< 0 (length cs)))
+      (.. (table.concat (icollect [_ c (ipairs cs)]
+                          (tostring c))
+                        (.. "\n" (string.rep " " indent)))
+          (.. "\n" (string.rep " " indent)) x)
       x))
 
 (fn shorthand-pair? [k v]
@@ -279,25 +261,31 @@ number of handled arguments."
     (.. (maybe-attach-comment k indent (?. mt :comments :keys key)) " "
         (maybe-attach-comment v indent (?. mt :comments :values val)))))
 
-(fn view-multiline-kv [pair-strs indent last-comment]
-  (if last-comment
-      (.. "{" (table.concat (doto pair-strs
-                              (table.insert (tostring last-comment))
-                              (table.insert "}"))
-                            (.. "\n" (string.rep " " indent))))
+(fn view-multiline-kv [pair-strs indent last-comments]
+  (if (and last-comments (< 0 (length last-comments)))
+      (do
+        (each [_ c (ipairs last-comments)]
+          (table.insert pair-strs (tostring c)))
+        (table.insert pair-strs "}")
+        (.. "{" (table.concat pair-strs (.. "\n" (string.rep " " indent)))))
       (.. "{" (table.concat pair-strs (.. "\n" (string.rep " " indent))) "}")))
+
+(fn sorter [a b]
+  (if (= (type a) (type b))
+      (< a b)
+      (< (tostring a) (tostring b))))
 
 (fn view-kv [t view inspector indent]
   "Normal fennelview table printing is insufficient for two reasons: it doesn't
 know what to do with : foo shorthand notation, and it doesn't emit comments."
   (let [indent (+ indent 1)
         mt (getmetatable t)
-        keys (or mt.keys (icollect [k (pairs t)]
-                           k))
+        keys (or mt.keys (doto (icollect [k (pairs t)] k)
+                           (table.sort sorter)))
         pair-strs (icollect [_ k (ipairs keys)]
                     (view-pair t view inspector indent mt k))
         oneline (.. "{" (table.concat pair-strs " ") "}")]
-    (if (or (oneline:match "\n") (?. mt :comments :last)
+    (if (or (oneline:match "\n") (?. mt :comments :last 1)
             (> (+ indent (length oneline)) inspector.line-length))
         (view-multiline-kv pair-strs indent (?. mt :comments :last))
         oneline)))
@@ -315,7 +303,7 @@ When f returns a truthy value, recursively walks the children."
 
 (fn set-fennelview-metamethod [idx form parent]
   (when (and (= :table (type form)) (not (fennel.sym? form))
-             (not (fennel.comment? form)) (not= (fennel.varg) form))
+             (not (fennel.comment? form)) (not (fennel.varg? form)))
     (when (and (not (fennel.list? form)) (not (fennel.sequence? form)))
       ;; Fennel's parser will always set the metatable, but we could get tables
       ;; from other places.
@@ -326,7 +314,7 @@ When f returns a truthy value, recursively walks the children."
 
 (fn prefer-colon? [s]
   ;; it has to be a legal colon-string, but it shouldn't be *just* punctuation
-  (and (s:find "^[-%w?^_!$%&*+./@|<=>]+$")
+  (and (s:find "^[-%w?^_!$%&*+./|<=>]+$")
        (not (s:find "^[-?^_!$%&*+./@|<=>%\\]+$"))))
 
 (fn fnlfmt [ast]
@@ -380,4 +368,4 @@ When f returns a truthy value, recursively walks the children."
     (table.insert out "")
     (table.concat out "\n")))
 
-{: fnlfmt : format-file :version :0.2.1-dev}
+{: fnlfmt : format-file :version :0.2.4-dev}
