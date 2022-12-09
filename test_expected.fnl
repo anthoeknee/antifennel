@@ -96,5 +96,8 @@
 
 (set (chr src.line src.from-macro?) (values filename line true))
 
+(let [isolated 9]
+  nil)
+
 (. (or (f123 :path) [:a :b :c]) :mode)
 

@@ -97,4 +97,8 @@ print({1, 2, a=3})
 local chr, src = "", {}
 chr, src.line, src["from-macro?"] = filename, line, true
 
+do
+   local isolated = 9
+end
+
 return (f123("path") or {"a", "b", "c"}).mode

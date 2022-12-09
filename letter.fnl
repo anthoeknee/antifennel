@@ -33,7 +33,9 @@ When f returns a truthy value, recursively walks the children."
   (let [bindings []]
     (table.insert node 2 bindings)
     (tset node 1 (fennel.sym :let))
-    (locals-to-bindings node bindings)))
+    (locals-to-bindings node bindings)
+    (when (= 2 (length node))
+      (table.insert node (fennel.sym :nil)))))
 
 (fn body-start [node]
   (let [has-name? (fennel.sym? (. node 2))]
