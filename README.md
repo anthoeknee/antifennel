@@ -24,9 +24,9 @@ Or during development, run without building:
 
 ## Limitations
 
-The Antifennel compiler assumes its input file is valid Lua; it does
+The Antifennel compiler assumes its input file is valid Lua 5.1; it does
 not attempt to give good error messages when provided with files that
-won't parse.
+won't parse or support newer features of Lua.
 
 Antifennel will never emit variadic operators, hashfns, or pattern
 matches, even in cases that would result in much better code.
@@ -75,6 +75,14 @@ But this is not supported:
 The second example must be split into two separate assignments in
 order to compile, since `tset` does not support multiple value
 assignment in Fennel.
+
+## Integration
+
+Included with
+[fennel-mode](https://git.sr.ht/~technomancy/fennel-mode/)
+is an
+[antifennel.el](https://git.sr.ht/~technomancy/fennel-mode/tree/main/item/antifennel.el)
+file which provides integration to run from inside Emacs.
 
 ## Contributing
 

@@ -55,7 +55,7 @@ local function compile(rdr, filename)
 end
 
 if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
-   local filename = arg[1]
+   local filename = arg[1] == "-" and "/dev/stdin" or arg[1]
    local f = filename and io.open(filename)
    if f then
       f:close()
