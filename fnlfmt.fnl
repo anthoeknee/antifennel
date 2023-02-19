@@ -9,19 +9,22 @@
 
 (local syntax (fennel.syntax))
 
+(fn line [ast]
+  (. (fennel.ast-source ast) :line))
+
 (fn last-line-length [line]
   (length (line:match "[^\n]*$")))
 
 (fn any? [tbl pred]
-  (not= 0 (length (icollect [_ v (pairs tbl)]
-                    (if (pred v) true)))))
+  (accumulate [found false _ v (pairs tbl) :until found]
+    (not (not (pred v)))))
 
 (fn strip-comments [t]
   (icollect [_ x (ipairs t)]
     (when (not (fennel.comment? x))
       x)))
 
-(fn view-fn-args [t view inspector indent start-indent out callee]
+(fn view-fn-args [t view inspector indent start-indent out]
   "Named functions need their name and arglists to be on the first line.
 Returns the index of where the body of the function starts."
   (if (fennel.sym? (. t 2))
@@ -42,11 +45,19 @@ Returns the index of where the body of the function starts."
   (let [last (or (. out (length out)) "")]
     (not (: (last:match "[^\n]*$") :match "[^ ]"))))
 
-(fn break-pair? [pair-wise? count viewed next-ast indent]
-  (and pair-wise? (= 1 (math.fmod count 2))
-       (not (and (fennel.comment? next-ast) ; does the trailing comment fit?
-                 (<= (+ indent 1 (last-line-length viewed) 1
-                        (length (tostring next-ast))) 80)))))
+(fn break-pair? [let? count viewed next-ast next-next indent iterator?]
+  (if let?
+      (and (= 1 (math.fmod count 2))
+           (not (and (fennel.comment? next-ast)
+                     ; does the trailing comment fit?
+                     (<= (+ indent 1 (last-line-length viewed) 1
+                            (length (tostring next-ast)))
+                         80))))
+      ;; if it's not a let, it's probably an iterator binding
+      (and (or (= :string (type next-ast)) (: (tostring next-ast) :find "^&"))
+           (< 80 (+ indent 1 (last-line-length viewed) 1
+                    (length (tostring next-ast))
+                    (length (fennel.view next-next)))))))
 
 (fn binding-comment [c indent out start-indent]
   (when (and (< 80 (+ indent (length (tostring c))))
@@ -75,7 +86,7 @@ We want everything to be on one line as much as possible, (except for let)."
           (set non-comment-count (+ non-comment-count 1))
           (when (< i (length bindings))
             (if (break-pair? pair-wise? non-comment-count viewed
-                             (. bindings (+ i 1)) indent)
+                             (. bindings (+ i 1)) (. bindings (+ i 2)) indent)
                 (do
                   (table.insert out (.. "\n" (string.rep " " start-indent)))
                   (set indent start-indent))
@@ -94,10 +105,13 @@ We want everything to be on one line as much as possible, (except for let)."
 number of handled arguments."
   (if (. force-initial-newline callee)
       (table.insert out (.. "\n" (string.rep " " start-indent)))
+      (not= nil (. t 2))
       (table.insert out " "))
   (let [indent (if (. force-initial-newline callee)
                    start-indent
                    (+ start-indent (length callee)))
+        ;; the handling of function args is very messy; sometimes they are
+        ;; handled here and sometimes they're down in view-fn-args; kinda bad.
         second (if (and (?. syntax callee :binding-form?)
                         (not= :unquote (tostring (. t 2 1))))
                    (view-binding (. t 2) view inspector (+ indent 1)
@@ -116,7 +130,7 @@ number of handled arguments."
        (<= (+ (or (string.find viewed "\n") (length (viewed:match "[^\n]*$")))
               1 (last-line-length (. out (length out)))) 80)))
 
-(fn trailing-comment? [out viewed body-indent indent]
+(fn trailing-comment? [viewed body-indent]
   (and (viewed:match "^; ") (<= body-indent 80)))
 
 (local one-element-per-line-forms {:-> true
@@ -130,6 +144,29 @@ number of handled arguments."
   (and (not (= start-index i))
        (or (prev:match "^ *%(fn [^%[]") (viewed:match "^ *%(fn [^%[]"))))
 
+(fn originally-same-lines? [t n1 n2]
+  (let [first (. t n1)
+        second (. t n2)]
+    (and (= :table (type second)) (= (line t) (line first) (line second)))))
+
+(fn scalar? [form]
+  (or (fennel.sym? form) (fennel.comment? form) (fennel.varg? form)
+      (not= :table (type form))))
+
+(fn depth [form base]
+  (if (scalar? form)
+      base
+      (accumulate [d (+ base 1) _ elem (pairs form)]
+        (math.max d (depth elem (+ base 1))))))
+
+(fn preserve-same-line? [t i indent out viewed depth]
+  (and (<= (+ indent (length (table.concat out)) (length viewed)) 80)
+       (<= depth 3)
+       ;; most one-liners can be preserved by originally-same-lines, but forms
+       ;; with metaless contents (strings/numbers) can't, so we special-case
+       (or (and (not= :table (type (. t i))) (<= (length t) 4))
+           (and (originally-same-lines? t 1 i) (not (viewed:find "\n"))))))
+
 (fn view-body [t view inspector start-indent out callee]
   "Insert arguments to a call to a special that takes body arguments."
   (let [start-index (view-init-body t view inspector start-indent out callee)
@@ -142,7 +179,8 @@ number of handled arguments."
       (let [viewed (view (. t i) inspector indent)
             body-indent (+ indent 1 (last-line-length (. out (length out))))]
         (if (or (match-same-line? callee i out viewed t)
-                (trailing-comment? out viewed body-indent indent))
+                (preserve-same-line? t i indent out viewed (depth t 0))
+                (trailing-comment? viewed body-indent))
             (do
               (table.insert out " ")
               (table.insert out (view (. t i) inspector body-indent)))
@@ -195,14 +233,10 @@ number of handled arguments."
                                  (+ i 3)
                                  (+ i 2)) view)))
 
-(fn originally-different-lines? [[_ first second] line]
-  (and (= :table (type first)) (= :table (type second))
-       (not= line (or first.line line) (or second.line line))))
-
 (fn view-maybe-body [t view inspector indent start-indent out callee]
   (if (pairwise-if? t indent 2 view)
       (view-pairwise-if t view inspector indent out)
-      (originally-different-lines? t t.line)
+      (not (originally-same-lines? t 2 3))
       (view-body t view inspector (+ start-indent 2) out callee)
       (view-call t view inspector indent out callee)))
 
@@ -212,24 +246,28 @@ number of handled arguments."
 
 (local sugars {:hashfn "#" :quote "`" :unquote ","})
 
-(fn sweeten [t view inspector indent view-list]
+(fn sweeten [t view inspector indent]
   (.. (. sugars (tostring (. t 1))) (view (. t 2) inspector (+ indent 1))))
 
 (local maybe-body {:-> true :->> true :-?> true :-?>> true :doto true :if true})
 
 (local renames {"#" :length "~=" :not=})
 
+(fn body-form? [callee]
+  (or (?. syntax callee :body-form?) (callee:find "%.with-")
+      (callee:find :^with-) (callee:find "%.def") (callee:find :^def)))
+
 (fn view-list [t view inspector start-indent]
   (if (. sugars (tostring (. t 1)))
-      (sweeten t view inspector start-indent view-list)
+      (sweeten t view inspector start-indent)
       (let [callee (view (. t 1) inspector (+ start-indent 1))
             callee (or (. renames callee) callee)
             out ["(" callee]
-            indent (if (?. syntax callee :body-form?)
+            indent (if (body-form? callee)
                        (+ start-indent 2)
                        (+ start-indent (length callee) 2))]
         ;; indent differently if it's calling a special form with body args
-        (if (?. syntax callee :body-form?)
+        (if (body-form? callee)
             (view-body t view inspector indent out callee)
             ;; in some cases we treat it differently depending on whether the
             ;; original code was multi-line or not
@@ -301,9 +339,8 @@ When f returns a truthy value, recursively walks the children."
   (walk (or custom-iterator pairs) nil nil root)
   root)
 
-(fn set-fennelview-metamethod [idx form parent]
-  (when (and (= :table (type form)) (not (fennel.sym? form))
-             (not (fennel.comment? form)) (not (fennel.varg? form)))
+(fn set-fennelview-metamethod [_idx form]
+  (when (not (scalar? form))
     (when (and (not (fennel.list? form)) (not (fennel.sequence? form)))
       ;; Fennel's parser will always set the metatable, but we could get tables
       ;; from other places.
@@ -335,13 +372,17 @@ When f returns a truthy value, recursively walks the children."
 
 (fn space-out-forms? [prev-ast ast]
   "Use previous line numbering to determine whether to space out forms."
-  (not (and prev-ast.line ast.line (= 1 (- ast.line prev-ast.line)))))
+  (not (and (line prev-ast) (line ast) (= 1 (- (line ast) (line prev-ast))))))
+
+(fn abort [filename]
+  (io.stderr:write (string.format "File not found: %s\n" filename))
+  (os.exit 1))
 
 (fn format-file [filename {: no-comments}]
   "Read source from a file and return formatted source."
   (let [f (match filename
             "-" io.stdin
-            _ (assert (io.open filename :r) "File not found."))
+            _ (or (io.open filename :r) (abort filename)))
         contents (f:read :*all)
         parser (-> (fennel.stringStream contents)
                    (fennel.parser filename {:comments (not no-comments)}))
@@ -368,4 +409,4 @@ When f returns a truthy value, recursively walks the children."
     (table.insert out "")
     (table.concat out "\n")))
 
-{: fnlfmt : format-file :version :0.2.4-dev}
+{: fnlfmt : format-file :version :0.3.0}
