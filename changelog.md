@@ -1,9 +1,10 @@
 # Summary of user-visible changes
 
-## 0.2.0 / ???
+## 0.2.0 / 2023-02-18
 
+* Use version 1.3.0 of Fennel and 0.3.0 of fnlfmt.
+* Fix a bug where multi-sym assignments were broken.
 * Fix a bug where sequences were emitted with curly brackets.
-* Use version 0.2.1 of fnlfmt.
 * Emit method calls as foo:bar where appropriate.
 * Upgrade to Fennel 0.8.2-dev.
 * Use `let` where appropriate to replace `do+local` or directly inside `fn`.
