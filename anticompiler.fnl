@@ -142,7 +142,7 @@
                             true))))
 
 (fn member [compile scope ast]
-  ;; this could be collapsed into a single dot call since those go nested
+  ;; TODO: collapse nested member calls
   (if (any-computed? ast)
       (list (sym ".") (compile scope ast.object)
             (if ast.computed
@@ -236,6 +236,7 @@
     (set target.computed false)
     (set target.property {:Kind :Identifier :name target.property.value})))
 
+;; TODO: foo.bar = function() end -> (fn foo.bar [])
 (fn assignment [compile scope ast]
   (let [{: left : right} ast
         right-out (if (= 1 (length right))
