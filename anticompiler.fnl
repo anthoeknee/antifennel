@@ -1,7 +1,7 @@
 ;; The name of this module is intended as a joke; this is in fact a compiler,
 ;; not an "anticompiler" even tho it goes in reverse from the fennel compiler
 ;; see http://nonadventures.com/2013/07/27/you-say-you-want-a-devolution/
-(local {: list : mangle : sym : sym? : view : sequence : multi-sym? : sym-char?}
+(local {: list : mangle : sym : sym? : view : sequence : multi-sym? : sym-char? : list?}
        (require :fennel))
 (local unpack (or table.unpack _G.unpack))
 
@@ -10,6 +10,13 @@
         out []]
     (each [i v (ipairs tbl)]
       (table.insert out (f v (and with-last? (= i len)))))
+    out))
+
+(fn mapcat [tbl f]
+  (let [out []]
+    (each [_ v (ipairs tbl)]
+      (each [_ v (ipairs (f v))]
+        (table.insert out v)))
     out))
 
 (fn distinct [tbl]
@@ -114,12 +121,32 @@
         (list (sym :lua)
               (.. "return " (table.concat (map args view) ", "))))))
 
+(fn flatten-associative [associative-op-sym frm]
+  (if (and (list? frm)
+           (<= 3 (length frm))
+           (= (. frm 1) associative-op-sym))
+    (icollect [i frm (ipairs frm)]
+      (when (not= 1 i)
+        frm))
+    [frm]))
+
+(local associative-operators
+  (collect [_ op (pairs [:band :bor :bxor :+ :*])]
+    op op))
 (fn binary [compile scope {: left : right : operator} ast]
   (let [operators {:== := "~=" :not= "#" :length "~" :bxor
-                   :<< :lshift :>> :rshift :& :band :| :bor}]
-    (list (sym (or (. operators operator) operator))
-          (compile scope left)
-          (compile scope right))))
+                   :<< :lshift :>> :rshift :& :band :| :bor}
+        op-str (or (. operators operator) operator)
+        op-sym (sym op-str)
+        compile (partial compile scope)]
+    (if (. associative-operators op-str)
+      (list op-sym
+            (unpack
+              (mapcat [left right]
+                      #(flatten-associative op-sym (compile $)))))
+      (list op-sym
+            (compile left)
+            (compile right)))))
 
 (fn unary [compile scope {: argument : operator} ast]
   (let [operators {"~" :bnot}]
