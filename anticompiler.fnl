@@ -304,7 +304,7 @@
   (error (.. ast.kind " is not supported on line " (or ast.line "?"))))
 
 (fn compile [scope ast tail?]
-  (when (os.getenv "DEBUG") (print ast.kind))
+  (when (os.getenv "DEBUG") (print ast.kind " " (or ast.line "?")))
   (match ast.kind
     "Chunk" (let [scope (make-scope nil)] ; top-level container of exprs
               (map ast.body (partial compile scope) true))
