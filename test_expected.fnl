@@ -11,8 +11,7 @@
 
 (: :abcdef :match :abc)
 
-(local t {:t2 {:f (fn [x]
-                    x)}})
+(local t {:t2 {:f (fn [x] x)}})
 
 (: (. t :t2) :f)
 
@@ -23,10 +22,7 @@
 
 (noprint (.. (or base "") "_" append "_"))
 
-(fn f [x y]
-  (var (z zz) (values 9 8))
-  (local b 99)
-  (set-forcibly! x 5)
+(fn f [x y] (var (z zz) (values 9 8)) (local b 99) (set-forcibly! x 5)
   (set z 0)
   (global a 1)
   (set y.y false))
@@ -42,14 +38,10 @@
         y 20]
     (+ x y)))
 
-(noprint ((fn []
-            (let [x 1]
-              x))))
+(noprint ((fn [] (let [x 1] x))))
 
 (fn f123 [/_1]
-  (let [/_0 :zero]
-    (noprint (.. /_0 /_1))
-    (values {} 2 3)))
+  (let [/_0 :zero] (noprint (.. /_0 /_1)) (values {} 2 3)))
 
 (fn bcd [...]
   (let [t {1 :bcd 2 ... :a :value}]
@@ -71,24 +63,19 @@
 
 (fn early-returns [some-var]
   (when true
-    (let [___antifnl_rtn_1___ some-var]
-      (lua "return ___antifnl_rtn_1___")))
+    (let [___antifnl_rtn_1___ some-var] (lua "return ___antifnl_rtn_1___")))
   nil)
 
 (local early-result (early-returns :success))
 
 (assert (= early-result :success) early-result)
 
-(for [outer 1 10]
-  (for [inner 1 10 2]
-    (noprint outer inner)))
+(for [outer 1 10] (for [inner 1 10 2] (noprint outer inner)))
 
-(fn dynamic-step []
-  3)
+(fn dynamic-step [] 3)
 
 (for [dynamic 1 2 (dynamic-step)]
-  (for [unnecessary-step 1 10]
-    (noprint dynamic unnecessary-step)))
+  (for [unnecessary-step 1 10] (noprint dynamic unnecessary-step)))
 
 (print {1 1 2 2 :a 3})
 
@@ -96,8 +83,48 @@
 
 (set (chr src.line src.from-macro?) (values filename line true))
 
-(let [isolated 9]
-  nil)
+(let [isolated 9] nil)
+
+(assert (= (rshift 50 1) 25))
+
+(assert (= (lshift 1 2) 4))
+
+(assert (= (band 50 25) 16))
+
+(assert (= (bxor 1 2) 3))
+
+(assert (= (bor 1 6) 7))
+
+(assert (= (bor (length [1]) 6) 7))
+
+(assert (= (bor 100 (lshift (rshift 99 2) 1)) 116))
+
+(assert (= (bor 100 (lshift (rshift 99 2) 1)) 116))
+
+(assert (= (lshift (rshift (bor 100 99) 2) 1) 50))
+
+(assert (= (lshift (bor 100 (rshift 99 2)) 1) 248))
+
+(assert (= (bor 100 (rshift 99 (lshift 2 1))) 102))
+
+(assert (= (lshift (rshift 59 2) 127) 0))
+
+(assert (= (lshift (rshift 59 2) 127) 0))
+
+(assert (= (rshift 59 (lshift 2 127)) 59))
+
+(assert (= (rshift (rshift 50 2) 1) 6))
+
+(assert (= (rshift (rshift 50 2) 1) 6))
+
+(assert (= (rshift 50 (rshift 2 1)) 25))
+
+(assert (= (lshift (rshift 59 2) 127) 0))
+
+(assert (= (rshift 59 (lshift 2 127)) 59))
+
+(assert (= (bnot 1) (- 2)))
+
+(assert (= (+ 1 (bnot 1)) (- 1)))
 
 (. (or (f123 :path) [:a :b :c]) :mode)
-

@@ -28,6 +28,9 @@ The Antifennel compiler assumes its input file is valid Lua 5.1; it does
 not attempt to give good error messages when provided with files that
 won't parse or support newer features of Lua.
 
+Antifennel supports all [bitwise operators](https://www.lua.org/manual/5.3/manual.html#3.4.2)
+introduced in Lua 5.3.
+
 Antifennel will never emit variadic operators, hashfns, or pattern
 matches, even in cases that would result in much better code.
 

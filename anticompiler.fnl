@@ -115,14 +115,16 @@
               (.. "return " (table.concat (map args view) ", "))))))
 
 (fn binary [compile scope {: left : right : operator} ast]
-  (let [operators {:== := "~=" :not= "#" :length "~" :bnot}]
+  (let [operators {:== := "~=" :not= "#" :length "~" :bxor
+                   :<< :lshift :>> :rshift :& :band :| :bor}]
     (list (sym (or (. operators operator) operator))
           (compile scope left)
           (compile scope right))))
 
 (fn unary [compile scope {: argument : operator} ast]
-  (list (sym operator)
-        (compile scope argument)))
+  (let [operators {"~" :bnot}]
+    (list (sym (or (. operators operator) operator))
+          (compile scope argument))))
 
 (fn call [compile scope {: arguments : callee}]
   (list (compile scope callee) (unpack (map arguments (partial compile scope)))))

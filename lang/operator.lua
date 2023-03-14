@@ -2,14 +2,16 @@
 -- (left priority) * 256 + (right priority)
 -- modulus is your friend
 local binop = {
-    ['+']  = 6 * 256 + 6, ['-']  = 6 * 256 + 6, ['*'] = 7 * 256 + 7, ['/'] = 7 * 256 + 7, ['%'] = 7 * 256 + 7,
-    ['^']  = 10* 256 + 9, ['..'] = 5 * 256 + 4, -- POW CONCAT (right associative)
+    ['+']  = 9 * 256 + 9, ['-']  = 9 * 256 + 9, ['*'] = 10 * 256 + 10, ['/'] = 10 * 256 + 10, ['%'] = 10 * 256 + 10,
+    ['^']  = 13* 256 +12, ['..'] = 8 * 256 + 7, -- POW CONCAT (right associative)
+    ['<<'] = 7 * 256 + 7, ['>>'] = 7 * 256 + 7,
+    ['&']  = 6 * 256 + 6, ['~']  = 5 * 256 + 5, ['|']  = 4 * 256 + 4,
     ['=='] = 3 * 256 + 3, ['~='] = 3 * 256 + 3,
     ['<']  = 3 * 256 + 3, ['>='] = 3 * 256 + 3, ['>'] = 3 * 256 + 3, ['<='] = 3 * 256 + 3,
     ['and']= 2 * 256 + 2, ['or'] = 1 * 256 + 1,
 }
 
-local unary_priority = 8
+local unary_priority = 12
 
 -- Pseudo priority of a simple identifier. Should be higher than any
 -- others operator's priority.

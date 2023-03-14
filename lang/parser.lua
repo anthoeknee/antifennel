@@ -139,7 +139,7 @@ end
 
 function expr_unop(ast, ls)
     local tk = ls.token
-    if tk == 'TK_not' or tk == '-' or tk == '#' then
+    if tk == 'TK_not' or tk == '-' or tk == '#' or tk == '~' then
         local line = ls.linenumber
         ls:next()
         local v = expr_binop(ast, ls, operator.unary_priority)
