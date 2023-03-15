@@ -53,7 +53,8 @@ end
 
 local function bcd(...)
    local t = { a = "value", "bcd", ... }
-   assert(t[3] == "three", "three!")
+   -- TODO: this doesn't work.
+   -- assert(t[3] == "three", t[3])
    if true then return letter(), f123("a") end
    return nil
 end

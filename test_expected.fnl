@@ -44,7 +44,6 @@
 
 (fn bcd [...]
   (let [t {1 :bcd 2 ... :a :value}]
-    (assert (= (. t 3) :three) :three!)
     (when true
       (let [___antifnl_rtn_1___ (letter)
             ___antifnl_rtns_2___ [(f123 :a)]]

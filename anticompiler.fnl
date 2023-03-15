@@ -1,6 +1,6 @@
 ;; The name of this module is intended as a joke; this is in fact a compiler,
 ;; not an "anticompiler" even tho it goes in reverse from the fennel compiler
-;; see http://nonadventures.com/2013/07/27/you-say-you-want-a-devolution/
+;; see https://nonadventures.com/2013/07/27/you-say-you-want-a-devolution/
 (local {: list : mangle : sym : sym? : view : sequence : multi-sym? : sym-char? : list?}
        (require :fennel))
 (local unpack (or table.unpack _G.unpack))
@@ -133,6 +133,7 @@
 (local associative-operators
   (collect [_ op (pairs [:band :bor :bxor :+ :*])]
     op op))
+
 (fn binary [compile scope {: left : right : operator} ast]
   (let [operators {:== := "~=" :not= "#" :length "~" :bxor
                    :<< :lshift :>> :rshift :& :band :| :bor}
