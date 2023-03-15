@@ -121,14 +121,10 @@
         (list (sym :lua)
               (.. "return " (table.concat (map args view) ", "))))))
 
-(fn flatten-associative [associative-op-sym frm]
-  (if (and (list? frm)
-           (<= 3 (length frm))
-           (= (. frm 1) associative-op-sym))
-    (icollect [i frm (ipairs frm)]
-      (when (not= 1 i)
-        frm))
-    [frm]))
+(fn flatten-associative [op-sym form]
+  (match (list? form)
+    [op-sym a b &as op-call] (doto op-call (table.remove 1))
+    _ [form]))
 
 (local associative-operators
   (collect [_ op (pairs [:band :bor :bxor :+ :*])]
@@ -138,16 +134,15 @@
   (let [operators {:== := "~=" :not= "#" :length "~" :bxor
                    :<< :lshift :>> :rshift :& :band :| :bor}
         op-str (or (. operators operator) operator)
-        op-sym (sym op-str)
-        compile (partial compile scope)]
+        op-sym (sym op-str)]
     (if (. associative-operators op-str)
       (list op-sym
             (unpack
               (mapcat [left right]
-                      #(flatten-associative op-sym (compile $)))))
+                      #(flatten-associative op-sym (compile scope $)))))
       (list op-sym
-            (compile left)
-            (compile right)))))
+            (compile scope left)
+            (compile scope right)))))
 
 (fn unary [compile scope {: argument : operator} ast]
   (let [operators {"~" :bnot}]
