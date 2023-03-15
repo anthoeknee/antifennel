@@ -4,10 +4,7 @@
 
 (when (not (pcall require :ffi))
   (set package.loaded.ffi {})
-  (set package.loaded.ffi.typeof
-       (fn []
-         (fn []
-           (error "requires luajit"))))
+  (set package.loaded.ffi.typeof (fn [] (fn [] (error "requires luajit"))))
   (local ___band___ ((load "return function(a, b) return a & b end")))
   (local ___rshift___ ((load "return function(a, b) return a >> b end")))
   (set _G.bit {:band ___band___ :rshift ___rshift___}))
@@ -33,12 +30,10 @@
 (local reserved {})
 
 (each [name data (pairs (fennel.syntax))]
-  (when (or (. data :special?) (. data :macro?))
-    (tset reserved name true)))
+  (when (or (. data :special?) (. data :macro?)) (tset reserved name true)))
 
 (fn uncamelize [name]
-  (fn splicedash [pre cap]
-    (.. pre "-" (cap:lower)))
+  (fn splicedash [pre cap] (.. pre "-" (cap:lower)))
 
   (name:gsub "([a-z0-9])([A-Z])" splicedash))
 
@@ -55,7 +50,7 @@
     (letter (compiler nil ast-tree))))
 
 (if (and (and debug debug.getinfo) (= (debug.getinfo 3) nil))
-    (let [filename (. arg 1)
+    (let [filename (or (and (= (. arg 1) "-") :/dev/stdin) (. arg 1))
           f (and filename (io.open filename))]
       (if f (do
               (f:close)
