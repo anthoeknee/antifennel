@@ -11,9 +11,9 @@
 
 (: :abcdef :match :abc)
 
-(local t {:t2 {:f (fn [x] x)}})
+(local t {:t2 {:t4 {:f (fn [x] x)}}})
 
-(: (. t :t2) :f)
+(: (. t :t2 :t4) :f)
 
 (each [k v (pairs {:a 1})]
   (set-forcibly! k :c))

@@ -167,12 +167,15 @@
                             true))))
 
 (fn member [compile scope ast]
-  ;; TODO: collapse nested member calls
   (if (any-computed? ast)
-      (list (sym ".") (compile scope ast.object)
-            (if ast.computed
-                (compile scope ast.property)
-                (view (compile scope ast.property))))
+      (let [object (compile scope ast.object)
+            key (if ast.computed
+                    (compile scope ast.property)
+                    (view (compile scope ast.property)))]
+        ;; collapse nested (. (. t k1) k2) -> (. t k1 k2)
+        (if (and (list? object) (= (sym ".") (. object 1)))
+            (doto object (table.insert key))
+            (list (sym ".") object key)))
       (sym (.. (tostring (compile scope ast.object)) "." ast.property.name))))
 
 (fn if* [compile scope {: tests : cons : alternate} tail?]
