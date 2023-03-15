@@ -127,10 +127,6 @@
 
 (assert (= (lshift 50 (lshift 2 1)) 800))
 
-(assert (= (bnot 1) (- 2)))
-
-(assert (= (+ 1 (bnot 1)) (- 1)))
-
 (assert (= (bor 1 2 3) 3))
 
 (assert (= (bor 1 2 3) 3))

@@ -23,7 +23,7 @@ test: antifennel self test/fennel.lua
 	diff -u antifennel_expected.fnl antifennel.fnl
 	@$(LUA) antifennel.lua test.lua > test.fnl
 	diff -u test_expected.fnl test.fnl
-	$(LUA) ./fennel --globals "*" test.fnl
+	$(LUA) ./fennel --use-bit-lib --globals "*" test.fnl
 	$(LUA) test/init.lua
 
 # We run the entire fennel test suite on the antifennel'd copy of Fennel.
