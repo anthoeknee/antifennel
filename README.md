@@ -94,7 +94,10 @@ Send patches directly to the maintainer or the
 
 ## Copyright
 
-Copyright © 2020-2022 Phil Hagelberg and contributors
+Depends on [fnlfmt](https://git.sr.ht/~technomancy/fnlfmt) which is
+included and is distributed under the same license terms.
+
+Copyright © 2020-2023 Phil Hagelberg and contributors
 Released under the MIT/X11 license, same as Fennel
 
 Lua parser/lexer (contents of the `lang/` directory) 

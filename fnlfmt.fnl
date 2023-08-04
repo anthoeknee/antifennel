@@ -1,11 +1,18 @@
-(local fennel (require :fennel))
-(local unpack (or table.unpack _G.unpack))
+;;; fnlfmt.fnl --- The Fennel Formatter
+
+;; https://git.sr.ht/~technomancy/fnlfmt
+
+;; SPDX-License-Identifier: MIT
+;; SPDX-FileCopyrightText: Phil Hagelberg and contributors
 
 ;; The basic idea is to run the code thru the parser, set a few overrides on the
 ;; __fennelview metamethods of the AST, then run it thru the fennel.view
 ;; pretty-printer. The bulk of this file consists of metamethods for lists and
 ;; tables which improve on fennel.view's existing logic of how to indent and
 ;; where to place newlines.
+
+(local fennel (require :fennel))
+(local unpack (or table.unpack _G.unpack))
 
 (local syntax (fennel.syntax))
 
@@ -124,9 +131,12 @@ number of handled arguments."
         (view-fn-args t view inspector indent2 start-indent out callee)
         3)))
 
+(fn match? [callee]
+  (. {:match true :case true :match-try true :case-try true} callee))
+
 (fn match-same-line? [callee i out viewed t]
   ;; just don't even try if there's comments!
-  (and (= :match callee) (= 0 (math.fmod i 2)) (not (any? t fennel.comment?))
+  (and (match? callee) (= 0 (math.fmod i 2)) (not (any? t fennel.comment?))
        (<= (+ (or (string.find viewed "\n") (length (viewed:match "[^\n]*$")))
               1 (last-line-length (. out (length out)))) 80)))
 
@@ -162,6 +172,7 @@ number of handled arguments."
 (fn preserve-same-line? [t i indent out viewed depth]
   (and (<= (+ indent (length (table.concat out)) (length viewed)) 80)
        (<= depth 3)
+       (not (fennel.comment? (. t (- i 1))))
        ;; most one-liners can be preserved by originally-same-lines, but forms
        ;; with metaless contents (strings/numbers) can't, so we special-case
        (or (and (not= :table (type (. t i))) (<= (length t) 4))
@@ -409,4 +420,4 @@ When f returns a truthy value, recursively walks the children."
     (table.insert out "")
     (table.concat out "\n")))
 
-{: fnlfmt : format-file :version :0.3.0}
+{: fnlfmt : format-file :version :0.3.1}
