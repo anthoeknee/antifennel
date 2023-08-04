@@ -1,6 +1,5 @@
-(local l (require :test.luaunit))
+(local t (require :test.faith))
 (local fennel (require :fennel))
-(local compiler (require :fennel.compiler))
 (local generate (require :test.generate))
 (local friend (require :fennel.friend))
 (local unpack (or table.unpack _G.unpack))
@@ -24,30 +23,29 @@
 
 (local marker {})
 
-(fn fuzz [verbose?]
+(fn fuzz [verbose? seed]
   (let [code (fennel.view (generate.generators.list generate.generate 1))
         (ok err) (xpcall #(fennel.compile-string code {:useMetadata true
                                                        :compiler-env :strict})
                          #(if (= $ marker)
                               marker
                               (.. (tostring $) "\n" (debug.traceback))))]
-    (if verbose?
-        (print code)
-        (io.write "."))
+    (when verbose?
+      (print code))
     (when (not ok)
       ;; if we get an error, it must come from assert-compile; if we get
       ;; a non-assertion error then it must be a compiler bug!
-      (l.assertEquals err marker (.. code "\n" (tostring err))))))
+      (t.= err marker (.. code "\n" (tostring err) "\nSeed: " seed)))))
 
 (fn test-fuzz []
   (let [verbose? (os.getenv "VERBOSE")
-        {: assert-compile : parse-error} friend]
-    (math.randomseed (os.time))
+        {: assert-compile : parse-error} friend
+        seed (os.time)]
+    (math.randomseed seed)
     (set friend.assert-compile #(error marker))
     (set friend.parse-error #(error marker))
     (for [_ 1 (tonumber (or (os.getenv "FUZZ_COUNT") 256))]
-      (fuzz verbose?))
-    (print)
+      (fuzz verbose? seed))
     (set friend.assert-compile assert-compile)
     (set friend.parse-error parse-error)))
 

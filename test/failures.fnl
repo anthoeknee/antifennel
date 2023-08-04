@@ -1,57 +1,69 @@
-(local l (require :test.luaunit))
+(local t (require :test.faith))
 (local fennel (require :fennel))
 (local friend (require :fennel.friend))
 
-;; TODO: use this macro below where possible
-(macro assert-fail-msg [form expected]
+;; This can only be used to assert failures on special forms; macros will be
+;; expanded before this code ever sees it.
+(macro assert-fail [form expected]
   `(let [(ok# msg#) (pcall fennel.compile-string (macrodebug ,form true)
-                           {:allowedGlobals (icollect [k# (pairs _G)] k#)})]
-     (l.assertFalse ok#)
-     (l.assertStrContains msg# ,expected)))
+                           {:allowedGlobals ["pairs" "next" "ipairs" "_G"]
+                            :correlate true})]
+     (t.is (not ok#) (.. "Expected failure: " ,(tostring form)))
+     (t.match ,expected msg#)))
 
-(fn test-names []
-  (assert-fail-msg (local + 6) "overshadowed by a special form")
-  (assert-fail-msg (print each) "tried to reference a special form"))
-
+;; use this only when you can't use the above macro
 (fn test-failures [failures]
   (each [code expected-msg (pairs failures)]
-    (let [(ok? msg) (pcall fennel.compileString code
-                           {:allowedGlobals ["pairs" "next" "ipairs"]
-                            :unfriendly true})]
-      (l.assertFalse ok? (.. "Expected compiling " code " to fail."))
-      (l.assertStrContains msg expected-msg))))
+    (let [(ok? msg) (pcall fennel.compile-string code
+                           {:allowedGlobals ["pairs" "next" "ipairs" "_G"]
+                            :unfriendly true :correlate true})]
+      (t.is (not ok?) (.. "Expected compiling " code " to fail."))
+      (t.is (msg:find expected-msg 1 true)
+            (.. "Expected to find\n" (fennel.view expected-msg)
+                "\n    in\n" (fennel.view msg))))))
+
+(fn test-names []
+  (assert-fail (local + 6) "overshadowed by a special form")
+  (assert-fail (macro comment [] "wat") "overshadowed by a special form")
+  (assert-fail (do each) "tried to reference a special form"))
 
 (fn test-global-fails []
-  (test-failures
-   {"(fn global [] 1)" "overshadowed"
-    "(fn global-caller [] (hey))" "unknown identifier"
-    "(global 48 :forty-eight)" "unable to bind number 48"
-    "(global good (fn [] nil)) (good) (BAD)" "BAD"
-    "(global let 1)" "tried to reference a special form"
-    "(hey)" "unknown identifier"
-    "(let [bl 8 a bcd] nil)" "unknown identifier"
-    "(let [global 1] 1)" "overshadowed"
-    "(local a-b 1) (global [a_b] [2])" "global a_b conflicts with local"
-    "(local a-b 1) (global a_b 2)" "global a_b conflicts with local"
-    "((fn [] (require-macros \"test.macros\") (global x1 (->1 99 (+ 31)))))
-      (->1 23 (+ 1))" "unknown identifier in strict mode"
-    ;; strict mode applies to macro modules too
-    "(import-macros t :test.bad.unknown-global)" "unknown identifier in strict mode"}))
-
+  (assert-fail (fn global [] 1) "overshadowed")
+  (assert-fail (fn global-caller [] (hey)) "unknown identifier")
+  (assert-fail (global 48 :forty-eight) "unable to bind number 48")
+  (assert-fail (do (global good (fn [] nil)) (good) (BAD)) "BAD")
+  (assert-fail (global let 1) "tried to reference a special form")
+  (assert-fail (hey) "unknown identifier")
+  (assert-fail (let [bl 8 a bcd] nil) "unknown identifier")
+  (assert-fail (let [global 1] 1) "overshadowed")
+  (assert-fail (do (local a-b 1) (global [a_b] [2]))
+               "global a_b conflicts with local")
+  (assert-fail (do (local a-b 1) (global a_b 2))
+               "global a_b conflicts with local")
+  (assert-fail (do ((fn []
+                      (require-macros :test.macros)
+                      (global x1 (->1 99 (+ 31)))))
+                   (->1 23 (+ 1)))
+               "unknown identifier")
+  ;; strict mode applies to macro modules too
+  (test-failures {"(import-macros t :test.bad.unknown-global)"
+                  "unknown identifier"}))
 
 (fn test-fn-fails []
-  (test-failures
-   {"(fn [12])" "expected symbol for function parameter"
-    "(fn [:huh] 4)" "expected symbol for function parameter"
-    "(fn []\n(for [32 34 32] 21))" "unknown:2:"
-    "(fn [] [...])" "unexpected vararg"
-    "(fn [false] 4)" "expected symbol for function parameter"
-    "(fn [nil] 4)" "expected symbol for function parameter"
-    "(fn)" "expected parameters"
-    "(lambda x)" "expected arg list"
-    "(fn abc:def [x] (+ x 2))" "unexpected multi symbol abc:def"
-    "#[$ $...] 1 2 3" "$ and $... in hashfn are mutually exclusive"
-    "#(values ...)" "use $... in hashfn"}))
+  (assert-fail (fn [12]) "expected symbol for function parameter")
+  (assert-fail (fn [:huh] 4) "expected symbol for function parameter")
+  (assert-fail (fn [] [...]) "unexpected vararg")
+  (assert-fail (fn [false] 4) "expected symbol for function parameter")
+  (assert-fail (fn [nil] 4) "expected symbol for function parameter")
+  (assert-fail (fn) "expected parameters")
+  (assert-fail (fn abc:def [x] (+ x 2)) "unexpected multi symbol abc:def")
+  (assert-fail #[$ $...] "$ and $... in hashfn are mutually exclusive")
+  (assert-fail #(values ...) "use $... in hashfn")
+  (assert-fail (fn [a & b c] nil)
+               "expected rest argument before last parameter")
+  (assert-fail (fn [...] (+ ...)) "tried to use vararg with operator")
+  (test-failures {"(lambda x)" "expected arg list"
+                  "(fn [a & {3 3}] nil)" "unable to bind number 3"}))
 
 (fn test-macro-fails []
   (test-failures
@@ -73,39 +85,43 @@
     "(import-macros {: asdf} :test.macros)"
     "macro asdf not found in module test.macros"
     "(import-macros m :test.bad.macro-no-return-table)"
-    "expected macros to be table"}))
+    "expected macros to be table"
+    "(macros {:noop #nil} {:identity #$})" "Expected one table argument"
+    "(macro xyz [t] ,t)" "tried to use unquote outside quote"
+    "(macros (do :BORK))" "Expected one table argument"}))
 
 (fn test-binding-fails []
-  (test-failures
-   {"(let [:x 1] 1)" "unable to bind"
-    "(let [[a & c d] [1 2]] c)" "rest argument before last parameter"
-    "(let [b 9\nq (.)] q)" "unknown:2:2 Compile error in '.': expected table"
-    "(let [false 1] 9)" "unable to bind boolean false"
-    "(let [next #(next $)] print)" "aliased by a local"
-    "(let [nil 1] 9)" "unable to bind"
-    "(let [pairs #(pairs $)] pairs)" "aliased by a local"
-    "(let [t []] (set t.:x :y))" "malformed multisym: t.:x"
-    "(let [t []] (set t:.x :y))" "malformed multisym: t:.x"
-    "(let [t []] (set t::x :y))" "malformed multisym: t::x"
-    "(let [t {:a 1}] (+ t.a BAD))" "BAD"
-    "(let [x 1 y] 8)" "expected even number of name/value bindings"
-    "(let [x 1] (set-forcibly! x 2) (set x 3) x)" "expected var"
-    "(let [x 1])" "expected body"
-    "(local 47 :forty-seven)" "unable to bind number 47"
-    "(local a~b 3)" "invalid character: ~"
-    "(local ipairs #(ipairs $))" "aliased by a local"
-    "(set [a b c] [1 2 3]) (+ a b c)" "expected local"
-    "(set a 19)" "error in 'a': expected local"
-    "(set)" "Compile error in 'set': expected name and value"
-    "(local abc&d 19)" "invalid character: &"
-    "(let [t []] (set t.47 :forty-seven))"
-    "can't start multisym segment with a digit: t.47"
-    "(let [x {:foo (fn [self] self.bar) :bar :baz}] x:foo)"
-    "multisym method calls may only be in call position"
-    "(let [x {:y {:foo (fn [self] self.bar) :bar :baz}}] x:y:foo)"
-    "method must be last component of multisym: x:y:foo"
-    "(set abc:def 2)" "cannot set method sym"
-    "(local () 1)" "at least one value"}))
+  (assert-fail (let [x {:foo (fn [self] self.bar) :bar :baz}] x:foo)
+               "multisym method calls may only be in call position")
+  (assert-fail (local () 1) "at least one value")
+  (assert-fail (set abc:def 2) "cannot set method sym")
+  (assert-fail (let [nil 1] 9) "unable to bind")
+  (assert-fail (let [[a & c d] [1 2]] c)
+               "rest argument before last parameter")
+  (assert-fail (local abc&d 19) "invalid character: &")
+  (assert-fail (set a 19) "expected local a")
+  (assert-fail (set a.b 2) "expected local a")
+  (assert-fail (let [pairs #(pairs $)] pairs) "aliased by a local")
+  (assert-fail (let [x 1] (set-forcibly! x 2) (set x 3) x) "expected var")
+  (assert-fail (set) "Compile error: expected name and value")
+  (assert-fail (do (set [a b c] [1 2 3]) (+ a b c)) "expected local")
+  (assert-fail (let [:x 1] 1) "unable to bind")
+  (assert-fail (let [next #(next $)] print) "aliased by a local")
+  (assert-fail (let [x 1 y] 8) "expected even number of name/value bindings")
+  (assert-fail (let [false 1] 9) "unable to bind boolean false")
+  (assert-fail (let [b 9 q (.)] q) "Compile error: expected table")
+  (assert-fail (local ipairs #(ipairs $)) "aliased by a local")
+  (assert-fail (let [x 1]) "expected body")
+  (assert-fail (let [t {:a 1}] (+ t.a BAD)) "BAD")
+  (assert-fail (local 47 :forty-seven) "unable to bind number 47")
+  (test-failures {"(local a~b 3)" "invalid character: ~"
+                  "(let [t []] (set t.47 :forty-seven))"
+                  "can't start multisym segment with a digit: t.47"
+                  "(let [t []] (set t.:x :y))" "malformed multisym: t.:x"
+                  "(let [t []] (set t::x :y))" "malformed multisym: t::x"
+                  "(let [t []] (set t:.x :y))" "malformed multisym: t:.x"
+                  "(let [x {:y {:foo (fn [self] self.bar) :bar :baz}}] x:y:foo)"
+                  "method must be last component of multisym: x:y:foo"}))
 
 (fn test-parse-fails []
   (test-failures
@@ -133,9 +149,6 @@
     "(#)" "expected one argument"
     ;; PUC is ridiculous in what it accepts in a string
     "\"\\!\"" (if (or (not= _VERSION "Lua 5.1") _G.jit) "Invalid string")
-    "(match :hey true false def)" "even number of pattern/body pairs"
-    "(match :hey)" "at least one pattern/body pair"
-    "(match)" "missing subject"
     "(doto)" "missing subject"
     ;; validity check on iterator clauses
     "(each [k (do-iter) :igloo 33] nil)" "unexpected iterator clause igloo"
@@ -144,18 +157,40 @@
     "unknown:5:0 Compile error in 'x': unable to bind number 34"
     "(with-open [(x y z) (values 1 2 3)])"
     "with-open only allows symbols in bindings"
-    "([])" "cannot call literal value table"}))
+    "([])" "cannot call literal value table"
+    "(let [((x)) 1] (do))" "can't nest multi-value destructuring"}))
+
+(fn test-match-fails []
+  (test-failures
+   {"(match :hey true false def)" "even number of pattern/body pairs"
+    "(match :hey)" "at least one pattern/body pair"
+    "(match)" "missing subject"
+    "(match :subject ((pattern)) :body)" "can't nest multi-value destructuring"
+    "(match :subject [(pattern)] :body)" "can't nest multi-value destructuring"
+    "(match :subject (where (where pattern)) :body)" "can't nest (where) pattern"
+    ;; (where (or)) shape is allowed
+    "(match :subject (where (or (where pattern))) :body)" "can't nest (where) pattern" ;; perhaps this should be allowed in the future
+    "(match :subject [(where pattern)] :body)" "can't nest (where) pattern"
+    "(match :subject ((where pattern)) :body)" "can't nest (where) pattern"
+    "(match :subject (or :subject x) :body)" "(or) must be used in (where) patterns"
+    "(case :subject (= x) :body)" "(=) must be used in (where) patterns"
+    "(match :subject [(or pattern)] :body)" "can't nest (or) pattern"
+    "(match :subject ((or pattern)) :body)" "can't nest (or) pattern"
+    "(match [1] (where (or [_ a] [a b]) b) :body)" "unknown identifier"
+    "(match [1] (where (or [_ a] [a b])) b)" "unknown identifier"}))
 
 (fn test-macro []
+  (tset fennel.macro-loaded :test.macros nil)
   (let [code "(import-macros {: fail-one} :test.macros) (fail-one 1)"
-        (ok? msg) (pcall fennel.compileString code)]
-    (l.assertStrContains msg "test/macros.fnl:2: oh no")
+        (ok? msg) (pcall fennel.compile-string code {:correlate true})]
+    (t.is (not ok?))
+    (t.match "test/macros.fnl:3: oh no" msg)
     ;; sometimes it's "in function f" and sometimes "in upvalue f"
-    (l.assertStrMatches msg ".*test/macros.fnl:2: in %w+ 'def'.*")
-    (l.assertStrMatches msg ".*test/macros.fnl:6: in %w+ 'abc'.*"))
+    (t.match ".*test/macros.fnl:3: in %w+ 'def'.*" msg)
+    (t.match ".*test/macros.fnl:4: in %w+ 'abc'.*" msg))
   (let [(ok? msg) (pcall fennel.eval "(require-macros 100)")]
-    (l.assertFalse ok?)
-    (l.assertStrMatches msg ".*module name must compile to string.*")))
+    (t.is (not ok?))
+    (t.match ".*module name must compile to string.*" msg)))
 
 (fn no-codes [s] (s:gsub "\027%[[0-9]m" ""))
 
@@ -170,22 +205,36 @@
         (_ msg4) (pcall fennel.eval "(abc] ;; msg4")
         (_ msg5) (pcall fennel.eval "(let {:a 1}) ;; msg5")
         (_ msg6) (pcall fennel.eval "(for [:abc \n \"def t\"] nil)")
-        (_ msg7) (pcall fennel.eval "(match) ;; msg7")]
+        (_ msg7) (pcall fennel.eval "(match) ;; msg7")
+        (_ msg-custom-pinpoint) (pcall fennel.eval "(asdf 123)"
+                                       {:error-pinpoint [">>>" "<<<"]})
+        (_ msg-custom-pinpoint2) (pcall fennel.eval "(asdf]"
+                                        {:error-pinpoint [">>>" "<<<"]})
+        (_ msg-custom-pinpoint3) (pcall fennel.eval
+                                        "(icollect [_ _ \n(pairs [])]\n)"
+                                        {:error-pinpoint [">>>" "<<<"]})]
+    ;; use the standard prefix
+    (t.match "^%S+:%d+:%d+ Compile error: .+" msg)
+    (t.match "^%S+:%d+:%d+ Parse error: .+" parse-msg)
     ;; show the raw error message
-    (l.assertStrContains msg "expected var x")
+    (t.match "expected var x" msg)
     ;; offer suggestions
-    (l.assertStrContains msg "Try declaring x using var")
+    (t.match "Try declaring x using var" msg)
     ;; show the code and point out the identifier at fault
-    (l.assertStrContains (no-codes msg) "(set x 3)")
+    (t.match "(set x 3)" (no-codes msg))
     ;; parse error
-    (l.assertStrContains (no-codes parse-msg) "{:a 1 :b 2 :c}")
+    (t.match "{:a 1 :b 2 :c}" (no-codes parse-msg))
     ;; non-table AST in assertion
-    (l.assertStrContains assert-msg "bad")
+    (t.match "bad" assert-msg)
     ;; source should be part of the error message
-    (l.assertStrContains msg4 "msg4")
-    (l.assertStrContains msg5 "msg5")
-    (l.assertStrContains msg6 "unable to bind string abc")
-    (l.assertStrContains msg7 "msg7")))
+    (t.match "msg4" msg4)
+    (t.match "msg5" msg5)
+    (t.match "unable to bind string abc" msg6)
+    (t.match "msg7" msg7)
+    ;; custom error pinpointing works
+    (t.match ">>>asdf<<<" msg-custom-pinpoint)
+    (t.match ">>>]<<<" msg-custom-pinpoint2)
+    (t.match ">>>%(icollect" msg-custom-pinpoint3)))
 
 (fn doer []
   ;; this plugin does not detach in subsequent tests, so we must check that
@@ -205,14 +254,15 @@
                                    :do (doer)
                                    :versions [(fennel.version:gsub "-dev" "")]}]
                         :filename "matcher.fnl"})]
-    (l.assertStrContains err "matcher.fnl:3"))
+    (t.match "matcher.fnl:3" err))
   (let [(_ err) (pcall fennel.eval "(match 5 b)")]
-    (l.assertNotStrContains err "fennel.compiler.macroexpand")))
+    (t.not-match "fennel.compiler.macroexpand" err)))
 
 {: test-global-fails
  : test-fn-fails
  : test-binding-fails
  : test-macro-fails
+ : test-match-fails
  : test-core-fails
  : test-suggestions
  : test-macro

@@ -24,16 +24,18 @@ test: antifennel self test/fennel.lua
 	@$(LUA) antifennel.lua test.lua > test.fnl
 	diff -u test_expected.fnl test.fnl
 	$(LUA) ./fennel --use-bit-lib --globals "*" test.fnl
-	$(LUA) test/init.lua
+	$(LUA) test/init.lua $(TESTS)
 
 # We run the entire fennel test suite on the antifennel'd copy of Fennel.
 
 update-tests:
 	rm -rf test
 	cp -r ../fennel/test .
+	rm test/faith.fnl
 	echo "{}" > test/linter.fnl # don't bother
 	sed "s/: test-nest/;; : test-nest/" -i test/core.fnl # don't bother
-	sed "s/bootstrap.fennel/test.fennel/g" -i test/init.lua # bootstrap compiler moved
+	sed "s/local oldfennel /--/g" -i test/init.lua # don't bootstrap
+	sed 's|oldfennel.dofile("src/fennel.fnl"|dofile("test/fennel.lua"|'  -i test/init.lua # moved
 
 update-fennel: ../fennel/fennel.lua ../fennel/fennel
 	cp $^ .
