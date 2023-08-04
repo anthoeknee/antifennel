@@ -43,18 +43,21 @@
     (set-forcibly! name (or (and (. reserved name) (.. "___" name "___")) name)))
   name)
 
-(fn compile [rdr filename]
-  (let [ls (lex-setup rdr filename)
+(fn compile [rdr filename comments]
+  (let [ls (lex-setup rdr filename comments)
         ast-builder (lua-ast.New mangle)
         ast-tree (parse ast-builder ls)]
     (letter (compiler nil ast-tree))))
 
 (if (and (and debug debug.getinfo) (= (debug.getinfo 3) nil))
-    (let [filename (or (and (= (. arg 1) "-") :/dev/stdin) (. arg 1))
-          f (and filename (io.open filename))]
+    (let [filename (or (and (= (. arg 1) "-") :/dev/stdin) (. arg 1))]
+      (var comments false)
+      (each [_ a (pairs arg)] (when (= a :--comments) (set comments true)))
+      (local f (and filename (io.open filename)))
       (if f (do
               (f:close)
-              (each [_ code (ipairs (compile (reader.file filename) filename))]
+              (each [_ code (ipairs (compile (reader.file filename) filename
+                                             comments))]
                 (print (.. (fnlfmt.fnlfmt code) "\n"))))
           (do
             (print (: "Usage: %s LUA_FILENAME" :format (. arg 0)))

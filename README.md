@@ -18,13 +18,11 @@ symlinked onto your `$PATH`; all it requires to run is Lua. It will
 default to using `luajit` but you can run `make LUA=lua5.4` to
 override the Lua implementation.
 
-Or during development, run without building:
-
-    $ luajit antifennel.lua targetfile.lua > targetfile.fnl
+Pass in the `--comments` flag to enable limited support for comments.
 
 ## Limitations
 
-The Antifennel compiler assumes its input file is valid Lua 5.1; it does
+The Antifennel compiler assumes its input file is valid Lua; it does
 not attempt to give good error messages when provided with files that
 won't parse or support newer features of Lua.
 
@@ -93,6 +91,10 @@ file which provides integration to run from inside Emacs.
 
 ## Contributing
 
+During development, run without building:
+
+    $ luajit antifennel.lua targetfile.lua > targetfile.fnl
+
 Send patches directly to the maintainer or the
 [Fennel mailing list](https://lists.sr.ht/%7Etechnomancy/fennel)
 
@@ -106,3 +108,6 @@ Released under the MIT/X11 license, same as Fennel
 
 Lua parser/lexer (contents of the `lang/` directory) 
 by [Francesc Abbate](https://github.com/franko/luajit-lang-toolkit)
+
+It has been modified to support newer 5.3+ operators, comments, and to
+add more flexibility around name mangling.

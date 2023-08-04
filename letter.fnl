@@ -30,6 +30,7 @@ When f returns a truthy value, recursively walks the children."
     (table.insert do-node 2 (table.remove fn-node i))))
 
 (fn transform-do [node]
+  ;; TODO: move initial comment to inside `let`
   (let [bindings []]
     (table.insert node 2 bindings)
     (tset node 1 (fennel.sym :let))

@@ -47,8 +47,8 @@ local function mangle(name, field)
    return name
 end
 
-local function compile(rdr, filename)
-   local ls = lex_setup(rdr, filename)
+local function compile(rdr, filename, comments)
+   local ls = lex_setup(rdr, filename, comments)
    local ast_builder = lua_ast.New(mangle)
    local ast_tree = parse(ast_builder, ls)
    return letter(compiler(nil, ast_tree))
@@ -56,10 +56,15 @@ end
 
 if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
    local filename = arg[1] == "-" and "/dev/stdin" or arg[1]
+   local comments = false
+   for _,a in ipairs(arg) do
+      if a == "--comments" then comments = true end
+   end
    local f = filename and io.open(filename)
    if f then
       f:close()
-      for _,code in ipairs(compile(reader.file(filename), filename)) do
+      for _,code in ipairs(compile(reader.file(filename),
+                                   filename, comments)) do
          print(fnlfmt.fnlfmt(code) .. "\n")
       end
    else
@@ -68,9 +73,10 @@ if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
       os.exit(1)
    end
 else
-   return function(str, source)
+   return function(str, source, filename, comments)
       local out = {}
-      for _,code in ipairs(compile(reader.string(str), source or "*source")) do
+      for _,code in ipairs(compile(reader.string(str), source or "*source"),
+                           filename, comments) do
          table.insert(out, fnlfmt.fnlfmt(code))
       end
       return table.concat(out, "\n")

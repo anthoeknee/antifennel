@@ -415,8 +415,10 @@ local function llex(ls)
                 else
                     skip_line(ls)
                 end
-            else
+            elseif ls.comments then
                 return 'TK_comment', lex_comment(ls)
+            else
+                skip_line(ls)
             end
         elseif current == '[' then
             local sep = skip_sep(ls)
@@ -511,7 +513,7 @@ end
 
 local LexerClass = { __index = Lexer }
 
-local function lex_setup(read_func, chunkname)
+local function lex_setup(read_func, chunkname, comments)
     local header = false
     local ls = {
         n = 0,
@@ -520,6 +522,7 @@ local function lex_setup(read_func, chunkname)
         lastline = 1,
         read_func = read_func,
         chunkname = chunkname,
+        comments = comments,
         space_buf = ''
     }
     nextchar(ls)
