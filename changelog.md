@@ -1,5 +1,11 @@
 # Summary of user-visible changes
 
+## 0.3.0 / ???
+
+* Fix a bug with raw iterator values in a for loop.
+* Add support for comments.
+* Add support for bitwise operators.
+
 ## 0.2.0 / 2023-02-18
 
 * Use version 1.3.0 of Fennel and 0.3.0 of fnlfmt.

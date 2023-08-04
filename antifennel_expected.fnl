@@ -52,7 +52,7 @@
 (if (and (and debug debug.getinfo) (= (debug.getinfo 3) nil))
     (let [filename (or (and (= (. arg 1) "-") :/dev/stdin) (. arg 1))]
       (var comments false)
-      (each [_ a (pairs arg)] (when (= a :--comments) (set comments true)))
+      (each [_ a (ipairs arg)] (when (= a :--comments) (set comments true)))
       (local f (and filename (io.open filename)))
       (if f (do
               (f:close)
@@ -63,9 +63,10 @@
             (print (: "Usage: %s LUA_FILENAME" :format (. arg 0)))
             (print "Compiles LUA_FILENAME to Fennel and prints output.")
             (os.exit 1))))
-    (fn [str source]
+    (fn [str source filename comments]
       (let [out {}]
-        (each [_ code (ipairs (compile (reader.string str) (or source :*source)))]
+        (each [_ code (ipairs (compile (reader.string str) (or source :*source))
+                              filename comments)]
           (table.insert out (fnlfmt.fnlfmt code)))
         (table.concat out "\n"))))
 

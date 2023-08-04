@@ -212,10 +212,13 @@
 
 (fn each* [compile scope {: namelist : explist : body}]
   (let [subscope (make-scope scope)
-        binding (map namelist.names (partial compile scope))]
+        binding (map namelist.names (partial compile scope))
+        iter (if (= 1 (length explist))
+                 (compile scope (. explist 1))
+                 (icollect [_ exp (ipairs explist) :into (list (sym :values))]
+                   (compile scope exp)))]
     (add-to-scope subscope :param binding)
-    (each [_ form (ipairs (map explist (partial compile scope)))]
-      (table.insert binding form))
+    (table.insert binding iter)
     (list (sym :each)
           binding
           (unpack (map body (partial compile subscope))))))
