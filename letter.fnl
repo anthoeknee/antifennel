@@ -16,21 +16,27 @@ When f returns a truthy value, recursively walks the children."
   (walk (or custom-iterator pairs) nil nil root)
   root)
 
+(fn local? [node]
+  (and (= :table (type node)) (= :local (tostring (. node 1)))))
+
 (fn locals-to-bindings [node bindings]
   (let [maybe-local (. node 3)]
-    (when (and (= :table (type maybe-local))
-               (= :local (tostring (. maybe-local 1))))
+    (when (or (local? maybe-local)
+              (and (fennel.comment? maybe-local)
+                   (local? (. node 4))))
       (table.remove node 3)
-      (table.insert bindings (. maybe-local 2))
-      (table.insert bindings (. maybe-local 3))
+      (if (fennel.comment? maybe-local)
+          (table.insert bindings maybe-local)
+          (do
+            (table.insert bindings (. maybe-local 2))
+            (table.insert bindings (. maybe-local 3))))
       (locals-to-bindings node bindings))))
 
 (fn move-body [fn-node do-node do-loc]
-  (for [i (# fn-node) do-loc -1]
+  (for [i (length fn-node) do-loc -1]
     (table.insert do-node 2 (table.remove fn-node i))))
 
 (fn transform-do [node]
-  ;; TODO: move initial comment to inside `let`
   (let [bindings []]
     (table.insert node 2 bindings)
     (tset node 1 (fennel.sym :let))
@@ -48,17 +54,20 @@ When f returns a truthy value, recursively walks the children."
     (move-body node do-node do-loc)
     (table.insert node do-loc do-node)))
 
+(fn only-before-local? [node i pred]
+  (if (local? (. node i)) true
+      (pred (. node i)) (only-before-local? node (+ i 1) pred)
+      false))
+
 (fn do-local-node? [node]
   (and (= :table (type node)) (= :do (tostring (. node 1)))
-       (= :table (type (. node 2))) (= :local (tostring (. node 2 1)))))
+       (only-before-local? node 2 fennel.comment?)))
 
 (fn fn-local-node? [node]
   (and (= :table (type node)) (= :fn (tostring (. node 1)))
-       (let [first-body (. node (body-start node))]
-         (and (= :table (type first-body))
-              (= :local (tostring (. first-body 1)))))))
+       (only-before-local? node (body-start node) fennel.comment?)))
 
-(fn letter [idx node]
+(fn letter [_idx node]
   (when (fn-local-node? node)
     (transform-fn node))
   (when (do-local-node? node)

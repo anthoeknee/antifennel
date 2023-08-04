@@ -79,7 +79,8 @@ assignment in Fennel.
 
 Regular statement-comments are compiled to Fennel comments; multi-line
 comments are currently not supported, nor are comments inside tables
-and argument lists.
+and argument lists. Sometimes comments which should go on the end of
+an existing line get placed on their own line.
 
 ## Integration
 

@@ -1,4 +1,6 @@
 local function _()
+   -- haha
+   local abc = "hi"
    body[#body + 1] = stmt
    scope.symmeta[parts[1]].used = true
    scope.symmeta[1] = true
@@ -33,6 +35,7 @@ end
 f = 59
 
 do
+   -- here
    local boo, twenty = "hoo", 20
    local fifteen = 15
    noprint(boo, twenty+fifteen)
@@ -125,9 +128,8 @@ assert (59 >> (2 << 127) == 59)
 assert (50 << 2 << 1 == 400)
 assert ((50 << 2) << 1 == 400)
 assert (50 << (2 << 1) == 800)
--- TODO: re-enable once https://todo.sr.ht/~technomancy/fennel/156 is fixed
--- assert ((~ 1) == -2)
--- assert ((1 + (~ 1)) == -1)
+assert ((~ 1) == -2)
+assert ((1 + (~ 1)) == -1)
 assert (1 | 2 | 3 == 3)
 assert (1 | (2 | 3) == 3)
 assert (1 | 2 | 3 | 4 == 7)

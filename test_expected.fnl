@@ -1,9 +1,11 @@
 (fn _ []
-  (tset body (+ (length body) 1) stmt)
-  (tset (. scope.symmeta (. parts 1)) :used true)
-  (tset scope.symmeta 1 true)
-  (global foo bar)
-  (tset ids k (ast:var_declare (. vlist k))))
+  (let [;; haha
+        abc :hi]
+    (tset body (+ (length body) 1) stmt)
+    (tset (. scope.symmeta (. parts 1)) :used true)
+    (tset scope.symmeta 1 true)
+    (global foo bar)
+    (tset ids k (ast:var_declare (. vlist k)))))
 
 (fn noprint [])
 
@@ -22,14 +24,23 @@
 
 (noprint (.. (or base "") "_" append "_"))
 
-(fn f [x y] (var (z zz) (values 9 8)) (local b 99) (set-forcibly! x 5)
+(fn f [x y] (var (z zz) (values 9 8)) ;; mutable local, immutable local
+  (local b 99)
+  ;; immutable local
+  (set-forcibly! x 5)
+  ;; changing function params
   (set z 0)
+  ;; changing mutable local
   (global a 1)
-  (set y.y false))
+  ;; setting a global
+  (set y.y false)
+  ;; table setter
+  )
 
 (set-forcibly! f 59)
 
-(let [(boo twenty) (values :hoo 20)
+(let [;; here
+      (boo twenty) (values :hoo 20)
       fifteen 15]
   (noprint boo (+ twenty fifteen)))
 
@@ -44,6 +55,8 @@
 
 (fn bcd [...]
   (let [t {1 :bcd 2 ... :a :value}]
+    ;; TODO: this doesn't work.
+    ;; assert(t[3] == "three", t[3])
     (when true
       (let [___antifnl_rtn_1___ (letter)
             ___antifnl_rtns_2___ [(f123 :a)]]
@@ -126,6 +139,10 @@
 (assert (= (lshift (lshift 50 2) 1) 400))
 
 (assert (= (lshift 50 (lshift 2 1)) 800))
+
+(assert (= (bnot 1) (- 2)))
+
+(assert (= (+ 1 (bnot 1)) (- 1)))
 
 (assert (= (bor 1 2 3) 3))
 

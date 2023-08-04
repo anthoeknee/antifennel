@@ -21,7 +21,7 @@ antifennel: antifennel.fnl anticompiler.fnl letter.fnl $(PARSER_FENNEL)
 
 test: antifennel self test/fennel.lua
 	diff -u antifennel_expected.fnl antifennel.fnl
-	@$(LUA) antifennel.lua test.lua > test.fnl
+	@$(LUA) antifennel.lua test.lua --comments > test.fnl
 	diff -u test_expected.fnl test.fnl
 	$(LUA) ./fennel --use-bit-lib --globals "*" test.fnl
 	$(LUA) test/init.lua $(TESTS)
@@ -47,16 +47,16 @@ update: update-fennel update-tests
 # many times your head spins.
 
 test/fennel.lua: fennel.lua anticompiler.fnl
-	$(LUA) antifennel.lua fennel.lua > tmp-fennel.fnl
+	$(LUA) antifennel.lua fennel.lua --comments > tmp-fennel.fnl
 	./fennel --compile tmp-fennel.fnl > $@
 
-antifennel.fnl: antifennel.lua
-	$(LUA) antifennel.lua antifennel.lua > antifennel.fnl
+antifennel.fnl: antifennel.lua anticompiler.fnl letter.fnl
+	$(LUA) antifennel.lua antifennel.lua --comments > antifennel.fnl
 
 self: $(PARSER_FENNEL)
 
 lang/%.fnl: lang/%.lua anticompiler.fnl
-	$(LUA) antifennel.lua $< > $@
+	$(LUA) antifennel.lua $< --comments > $@
 
 clean: ; rm -f lang/*.fnl antifennel.fnl antifennel
 

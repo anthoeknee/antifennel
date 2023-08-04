@@ -2,15 +2,20 @@
 
 (set debug.traceback fennel.traceback)
 
+;; our lexer was written for luajit; let's add a compatibility shim for PUC
+
 (when (not (pcall require :ffi))
   (set package.loaded.ffi {})
   (set package.loaded.ffi.typeof (fn [] (fn [] (error "requires luajit"))))
+  ;; have to use load here since the parser will barf in luajit
   (local ___band___ ((load "return function(a, b) return a & b end")))
   (local ___rshift___ ((load "return function(a, b) return a >> b end")))
   (set _G.bit {:band ___band___ :rshift ___rshift___}))
 
-(if (os.getenv :FNL) (table.insert (or package.loaders package.searchers) 1
-                                   fennel.searcher)
+(if (os.getenv :FNL) (do
+                       ;; prefer Fennel to Lua when both exist
+                       (table.insert (or package.loaders package.searchers) 1
+                                     fennel.searcher))
     (table.insert (or package.loaders package.searchers) fennel.searcher))
 
 (local lex-setup (require :lang.lexer))
@@ -50,7 +55,8 @@
     (letter (compiler nil ast-tree))))
 
 (if (and (and debug debug.getinfo) (= (debug.getinfo 3) nil))
-    (let [filename (or (and (= (. arg 1) "-") :/dev/stdin) (. arg 1))]
+    (let [;; run as a script
+          filename (or (and (= (. arg 1) "-") :/dev/stdin) (. arg 1))]
       (var comments false)
       (each [_ a (ipairs arg)] (when (= a :--comments) (set comments true)))
       (local f (and filename (io.open filename)))
