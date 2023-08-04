@@ -192,6 +192,10 @@ function AST.for_iter_stmt(ast, vars, exps, body, line, lastline)
     return build("ForInStatement", { namelist = names, explist = exps, body = body, line = line, lastline = lastline })
 end
 
+function AST.comment(ast, contents)
+    return build("Comment", { contents = contents })
+end
+
 function AST.goto_stmt(ast, name, line)
     return build("GotoStatement", { label = name, line = line })
 end

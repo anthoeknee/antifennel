@@ -20,7 +20,8 @@ for k,v in pairs({a=1}) do k="c" end
 local append = "two"
 noprint((base or '') .. '_' .. append .. '_')
 
-local f = function(x, y)
+local f = function(x, -- a coordinate
+                   y)
    local z,zz = 9,8 -- mutable local, immutable local
    local b = 99 -- immutable local
    x = 5 -- changing function params

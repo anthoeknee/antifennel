@@ -16,6 +16,10 @@ local function checkcond(ls, cond, em)
     if not cond then err_syntax(ls, em) end
 end
 
+local function skip_comment(ls)
+    while ls.token == 'TK_comment' do ls:next() end
+end
+
 local function lex_opt(ls, tok)
     if ls.token == tok then
         ls:next()
@@ -76,6 +80,7 @@ function expr_table(ast, ls)
     local kvs = {}
     lex_check(ls, '{')
     while ls.token ~= '}' do
+        skip_comment(ls)
         local key
         if ls.token == '[' then
             key = expr_bracket(ast, ls)
@@ -216,6 +221,7 @@ local function parse_return(ast, ls, line)
     else -- Return with one or more values.
         exps = expr_list(ast, ls)
     end
+    skip_comment(ls)
     return ast:return_stmt(exps, line)
 end
 
@@ -490,13 +496,15 @@ local function parse_params(ast, ls, needself)
             if ls.token == 'TK_name' or (not LJ_52 and ls.token == 'TK_goto') then
                 local name = lex_str(ls)
                 args[#args+1] = name
-                if lex_opt(ls, ',') then return tk_args() end
+                if lex_opt(ls, ',') then
+                   skip_comment(ls)
+                   return tk_args()
+                end
             elseif ls.token == 'TK_dots' then
                 ls:next()
                 vararg = true
             else
                err_syntax(ls, "<name> or \"...\" expected")
-               if lex_opt(ls, ',') then return tk_args() end
             end
         end
         tk_args()
@@ -514,7 +522,12 @@ local function parse_block_stmts(ast, ls)
     local stmt, islast = nil, false
     local body = { }
     while not islast and not EndOfBlock[ls.token] do
-        stmt, islast = parse_stmt(ast, ls)
+        if ls.token == 'TK_comment' then
+            stmt = ast:comment(ls.tokenval)
+            ls:next()
+        else
+            stmt, islast = parse_stmt(ast, ls)
+        end
         body[#body + 1] = stmt
         lex_opt(ls, ';')
     end

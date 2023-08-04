@@ -1,7 +1,8 @@
 ;; The name of this module is intended as a joke; this is in fact a compiler,
 ;; not an "anticompiler" even tho it goes in reverse from the fennel compiler
 ;; see https://nonadventures.com/2013/07/27/you-say-you-want-a-devolution/
-(local {: list : mangle : sym : sym? : view : sequence : multi-sym? : sym-char? : list?}
+(local {: list : mangle : sym : sym? : view : sequence : multi-sym? : sym-char?
+        : list? :comment make-comment}
        (require :fennel))
 (local unpack (or table.unpack _G.unpack))
 
@@ -325,6 +326,9 @@
 (fn break [compile scope ast]
   (list (sym :lua) :break))
 
+(fn comment* [ast]
+  (make-comment (.. ";; " ast.contents)))
+
 (fn unsupported [ast]
   (when (os.getenv "DEBUG") (p ast))
   (error (.. ast.kind " is not supported on line " (or ast.line "?"))))
@@ -363,6 +367,7 @@
     "Identifier" (identifier ast)
     "Table" (table* compile scope ast)
     "Literal" (if (= nil ast.value) (sym :nil) ast.value)
+    "Comment" (comment* ast)
     "Vararg" (sym "...")
     nil (sym :nil)
 

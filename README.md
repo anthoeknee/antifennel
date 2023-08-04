@@ -79,6 +79,10 @@ The second example must be split into two separate assignments in
 order to compile, since `tset` does not support multiple value
 assignment in Fennel.
 
+Regular statement-comments are compiled to Fennel comments; multi-line
+comments are currently not supported, nor are comments inside tables
+and argument lists.
+
 ## Integration
 
 Included with

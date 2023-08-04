@@ -247,6 +247,15 @@ local function lex_number(ls)
     end
 end
 
+local function lex_comment(ls)
+    local c = ls.current
+    while c ~= '\n' and c ~= '\r' and c ~= END_OF_STREAM do
+       save_and_next(ls)
+       c = ls.current
+    end
+    return get_string(ls, 1, 0)
+end
+
 local function read_long_string(ls, sep, ret_value)
     save_and_next(ls) -- skip 2nd `['
     if curr_is_newline(ls) then -- string starts with a newline?
@@ -397,6 +406,7 @@ local function llex(ls)
             nextchar(ls)
             spaceadd(ls, '--')
             if ls.current == '[' then
+                -- TODO: long comment support
                 local sep = skip_sep(ls)
                 resetbuf_tospace(ls) -- `skip_sep' may dirty the buffer
                 if sep >= 0 then
@@ -406,7 +416,7 @@ local function llex(ls)
                     skip_line(ls)
                 end
             else
-                skip_line(ls)
+                return 'TK_comment', lex_comment(ls)
             end
         elseif current == '[' then
             local sep = skip_sep(ls)
