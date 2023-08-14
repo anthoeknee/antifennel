@@ -1,3 +1,8 @@
+LUA ?= luajit
+DESTDIR ?=
+PREFIX ?= /usr/local
+BIN_DIR ?= $(PREFIX)/bin
+
 PARSER_LUA=lang/reader.lua \
 		lang/operator.lua \
 		lang/id_generator.lua \
@@ -11,8 +16,6 @@ PARSER_FENNEL=lang/reader.fnl \
 		lang/lua_ast.fnl \
 		lang/lexer.fnl \
 		lang/parser.fnl
-
-LUA ?= luajit
 
 antifennel: antifennel.fnl anticompiler.fnl letter.fnl $(PARSER_FENNEL)
 	echo "#!/usr/bin/env $(LUA)" > $@
@@ -64,4 +67,7 @@ ci: test count
 
 count: ; cloc $(PARSER_FENNEL) anticompiler.fnl antifennel.lua
 
-.PHONY: test self clean ci update update-fennel update-tests
+install: antifennel
+	mkdir -p $(DESTDIR)$(BIN_DIR) && cp $< $(DESTDIR)$(BIN_DIR)/
+
+.PHONY: test self clean ci update update-fennel update-tests install

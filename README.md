@@ -10,12 +10,11 @@ see it in action on Fennel's web site without installing anything.
 
 The only prerequisites are having Lua and GNU Make installed.
 
-    $ make
-    $ ./antifennel targetfile.lua > targetfile.fnl
+    $ make && sudo make install # system-wide in /usr/local/bin
+    $ make install PREFIX=$HOME # user-level in ~/bin
+    $ antifennel targetfile.lua > targetfile.fnl
 
-The `antifennel` script is self-contained and can be moved or
-symlinked onto your `$PATH`; all it requires to run is Lua. It will
-default to using `luajit` but you can run `make LUA=lua5.4` to
+It will default to using `luajit` but you can run `make LUA=lua5.4` to
 override the Lua implementation.
 
 Pass in the `--comments` flag to enable limited support for comments.
