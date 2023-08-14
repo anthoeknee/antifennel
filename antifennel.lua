@@ -55,11 +55,14 @@ local function compile(rdr, filename, comments)
 end
 
 if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
-   local filename = arg[1] == "-" and "/dev/stdin" or arg[1]
    local comments = false
-   for _,a in ipairs(arg) do
-      if a == "--comments" then comments = true end
+   for i,a in ipairs(arg) do
+      if a == "--comments" then
+         table.remove(arg, i)
+         comments = true
+      end
    end
+   local filename = arg[1] == "-" and "/dev/stdin" or arg[1]
    local f = filename and io.open(filename)
    if f then
       f:close()
@@ -68,7 +71,7 @@ if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
          print(fnlfmt.fnlfmt(code) .. "\n")
       end
    else
-      print(("Usage: %s LUA_FILENAME"):format(arg[0]))
+      print(("Usage: %s [--comments] LUA_FILENAME"):format(arg[0]))
       print("Compiles LUA_FILENAME to Fennel and prints output.")
       os.exit(1)
    end
