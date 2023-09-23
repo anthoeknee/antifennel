@@ -6,7 +6,9 @@
 
 (when (not (pcall require :ffi))
   (set package.loaded.ffi {})
-  (set package.loaded.ffi.typeof (fn [] (fn [] (error "requires luajit"))))
+
+  (fn package.loaded.ffi.typeof [] (fn [] (error "requires luajit")))
+
   ;; have to use load here since the parser will barf in luajit
   (local ___band___ ((load "return function(a, b) return a & b end")))
   (local ___rshift___ ((load "return function(a, b) return a >> b end")))

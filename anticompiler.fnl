@@ -268,7 +268,11 @@
     (set target.computed false)
     (set target.property {:Kind :Identifier :name target.property.value})))
 
-;; TODO: foo.bar = function() end -> (fn foo.bar [])
+(fn member-function-declaration [member-expression f-ast]
+  (doto (collect [k v (pairs f-ast)] k v)
+    (tset :kind :FunctionDeclaration)
+    (tset :id member-expression)))
+
 (fn assignment [compile scope ast]
   (let [{: left : right} ast
         right-out (if (= 1 (length right))
@@ -279,6 +283,11 @@
                             (unpack (map right (partial compile scope)))))]
     (if (any-computed? (. left 1))
         (tset* compile scope left right-out ast)
+        ;; a.b = function() ...
+        (and (= :MemberExpression (. left 1 :kind))
+             (= :FunctionExpression (. right 1 :kind)))
+        (declare-function compile scope
+                          (member-function-declaration (. left 1) (. right 1)))
         (let [setter (setter-for scope (map left #(or $.name $)))]
           (map left computed->multisym!)
           (list (sym setter)

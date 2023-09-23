@@ -53,7 +53,7 @@
 (fn f123 [/_1]
   (let [/_0 :zero] (noprint (.. /_0 /_1)) (values {} 2 3)))
 
-(fn bcd [...]
+(fn t.bcd [...]
   (let [t {1 :bcd :a :value}]
     (when true
       (let [___antifnl_rtn_1___ (letter)
@@ -61,7 +61,7 @@
         (lua "return ___antifnl_rtn_1___, (table.unpack or _G.unpack)(___antifnl_rtns_2___)")))
     nil))
 
-(local (_ _ two) (bcd :two :three))
+(local (_ _ two) (t.bcd :two :three))
 
 (assert (= two 2) :two)
 

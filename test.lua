@@ -55,13 +55,13 @@ local function f123(_1)
    return {}, 2, 3
 end
 
-local function bcd(...)
+t.bcd = function(...)
    local t = { a = "value", "bcd" }
    if true then return letter(), f123("a") end
    return nil
 end
 
-local _, _, two = bcd("two", "three")
+local _, _, two = t.bcd("two", "three")
 assert(two == 2, "two")
 
 local worldObjects, will_o_the_wisp
