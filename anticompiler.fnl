@@ -268,8 +268,8 @@
     (set target.computed false)
     (set target.property {:Kind :Identifier :name target.property.value})))
 
-(fn member-function-declaration [member-expression f-ast]
-  (doto (collect [k v (pairs f-ast)] k v)
+(fn member-function-declaration [member-expression function-ast]
+  (doto function-ast
     (tset :kind :FunctionDeclaration)
     (tset :id member-expression)))
 
