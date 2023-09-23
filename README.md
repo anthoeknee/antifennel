@@ -76,10 +76,19 @@ The second example must be split into two separate assignments in
 order to compile, since `tset` does not support multiple value
 assignment in Fennel.
 
-Regular statement-comments are compiled to Fennel comments; multi-line
-comments are currently not supported, nor are comments inside tables
-and argument lists. Sometimes comments which should go on the end of
-an existing line get placed on their own line.
+Regular line-comments are compiled to Fennel comments when the
+`--comments` argument is given; multi-line comments are currently not
+supported, nor are comments inside tables and argument
+lists. Sometimes comments which should go on the end of an existing
+line get placed on their own line.
+
+Expanding multi-values into key/value tables does not work; for instance:
+
+    local t = { a = "value", "bcd", ... }
+
+This is because while the Fennel output can contain mixed tables, it
+can't guarantee the order of the keys in the table, and for the above to
+work, the multi-valued expression must be the last one in the Lua output.
 
 ## Integration
 

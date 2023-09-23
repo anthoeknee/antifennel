@@ -56,9 +56,7 @@ local function f123(_1)
 end
 
 local function bcd(...)
-   local t = { a = "value", "bcd", ... }
-   -- TODO: this doesn't work.
-   -- assert(t[3] == "three", t[3])
+   local t = { a = "value", "bcd" }
    if true then return letter(), f123("a") end
    return nil
 end

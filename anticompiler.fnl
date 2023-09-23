@@ -310,11 +310,20 @@
               step-compiled step-compiled)]
           (unpack (map body (partial compile subscope))))))
 
+(fn potential-multival? [{: kind}]
+  (or (= :Vararg kind) (= :CallExpression kind)))
+
 (fn table* [compile scope {: keyvals}]
   (let [out (if (next keyvals)
                 (sequence)
                 {})]
-    (each [_ [v k] (pairs keyvals)]
+    (each [i [v k] (ipairs keyvals)]
+      ;; if the current key is nil then it's numeric; if there's no metatable
+      ;; on out, then the table has *some* non-numeric key.
+      (assert (not (and (= nil k) (not (getmetatable out))
+                        (= nil (. keyvals (+ i 1)))
+                        (potential-multival? v)))
+              (.. "Mixed tables can't end in potential multivals: " (view keyvals)))
       (if k
           (do (tset out (compile scope k) (compile scope v))
               (setmetatable out nil))

@@ -2,6 +2,7 @@
 
 ## 0.3.0 / ???
 
+* Refuse to compile multivals at the end of mixed tables.
 * Fix a bug with raw iterator values in a for loop.
 * Add support for comments.
 * Add support for bitwise operators.

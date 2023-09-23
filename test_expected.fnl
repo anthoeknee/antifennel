@@ -54,9 +54,7 @@
   (let [/_0 :zero] (noprint (.. /_0 /_1)) (values {} 2 3)))
 
 (fn bcd [...]
-  (let [t {1 :bcd 2 ... :a :value}]
-    ;; TODO: this doesn't work.
-    ;; assert(t[3] == "three", t[3])
+  (let [t {1 :bcd :a :value}]
     (when true
       (let [___antifnl_rtn_1___ (letter)
             ___antifnl_rtns_2___ [(f123 :a)]]
