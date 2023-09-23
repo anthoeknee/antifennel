@@ -58,7 +58,8 @@
     (let [;; run as a script
           filename (or (and (= (. arg 1) "-") :/dev/stdin) (. arg 1))]
       (var comments false)
-      (each [_ a (ipairs arg)] (when (= a :--comments) (set comments true)))
+      (each [i a (ipairs arg)]
+        (when (= a :--comments) (table.remove arg i) (set comments true)))
       (local f (and filename (io.open filename)))
       (if f (do
               (f:close)
@@ -66,7 +67,7 @@
                                              comments))]
                 (print (.. (fnlfmt.fnlfmt code) "\n"))))
           (do
-            (print (: "Usage: %s LUA_FILENAME" :format (. arg 0)))
+            (print (: "Usage: %s [--comments] LUA_FILENAME" :format (. arg 0)))
             (print "Compiles LUA_FILENAME to Fennel and prints output.")
             (os.exit 1))))
     (fn [str source filename comments]

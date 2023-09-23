@@ -55,6 +55,7 @@ local function compile(rdr, filename, comments)
 end
 
 if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
+   local filename = arg[1] == "-" and "/dev/stdin" or arg[1]
    local comments = false
    for i,a in ipairs(arg) do
       if a == "--comments" then
@@ -62,7 +63,6 @@ if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
          comments = true
       end
    end
-   local filename = arg[1] == "-" and "/dev/stdin" or arg[1]
    local f = filename and io.open(filename)
    if f then
       f:close()
