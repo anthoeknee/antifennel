@@ -70,4 +70,7 @@ count: ; cloc $(PARSER_FENNEL) anticompiler.fnl antifennel.lua
 install: antifennel
 	mkdir -p $(DESTDIR)$(BIN_DIR) && cp $< $(DESTDIR)$(BIN_DIR)/
 
+uninstall:
+	rm -f $(DESTDIR)$(BIN_DIR)/antifennel
+
 .PHONY: test self clean ci update update-fennel update-tests install
