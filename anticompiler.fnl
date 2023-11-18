@@ -1,7 +1,7 @@
 ;; The name of this module is intended as a joke; this is in fact a compiler,
 ;; not an "anticompiler" even tho it goes in reverse from the fennel compiler
 ;; see https://nonadventures.com/2013/07/27/you-say-you-want-a-devolution/
-(local {: list : mangle : sym : sym? : view : sequence : multi-sym? : sym-char?
+(local {: list : mangle : sym : sym? : view : sequence : sym-char?
         : list? :comment make-comment}
        (require :fennel))
 (local unpack (or table.unpack _G.unpack))
@@ -36,7 +36,7 @@
   (each [_ name (ipairs names)]
     (tset scope (tostring name) {: kind  : ast})))
 
-(fn function [compile scope {: vararg : params : body}]
+(fn function [compile scope {: params : body}]
   (let [params (map params (partial compile scope))
         subscope (doto (make-scope scope)
                    (add-to-scope :param params))]
@@ -104,7 +104,7 @@
         (table.insert bindings (sym name))
         (table.insert bindings arg))))
 
-(fn early-return-complex [compile scope args original-args]
+(fn early-return-complex [_compile _scope args original-args]
   ;; we have to precompile the args and let-bind them because we can't put
   ;; Fennel expressions inside the lua special form.
   (let [binding-names []
@@ -124,14 +124,14 @@
 
 (fn flatten-associative [op-sym form]
   (match (list? form)
-    [op-sym a b &as op-call] (doto op-call (table.remove 1))
+    [op-sym _ _ &as op-call] (doto op-call (table.remove 1))
     _ [form]))
 
 (local associative-operators
   (collect [_ op (pairs [:band :bor :bxor :+ :*])]
     op op))
 
-(fn binary [compile scope {: left : right : operator} ast]
+(fn binary [compile scope {: left : right : operator} _ast]
   (let [operators {:== := "~=" :not= "#" :length "~" :bxor
                    :<< :lshift :>> :rshift :& :band :| :bor}
         op-str (or (. operators operator) operator)
@@ -145,7 +145,7 @@
             (compile scope left)
             (compile scope right)))))
 
-(fn unary [compile scope {: argument : operator} ast]
+(fn unary [compile scope {: argument : operator} _ast]
   (let [operators {"~" :bnot}]
     (list (sym (or (. operators operator) operator))
           (compile scope argument))))
@@ -344,7 +344,7 @@
     (list (sym :do)
           (unpack (map body (partial compile subscope) tail?)))))
 
-(fn break [compile scope ast]
+(fn break [_compile _scope _ast]
   (list (sym :lua) :break))
 
 (fn comment* [ast]
