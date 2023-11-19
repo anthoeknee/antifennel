@@ -2,6 +2,7 @@
 
 ## 0.3.0 / ???
 
+* Compile global functions to `(fn _G.f [] ...)` instead of `set-forcibly!`
 * Compile `t.f = function` to `(fn t.f [] ...)` without `set`.
 * Refuse to compile multivals at the end of mixed tables.
 * Fix a bug with raw iterator values in a for loop.

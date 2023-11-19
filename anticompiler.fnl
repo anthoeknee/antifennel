@@ -44,12 +44,11 @@
           (unpack (map body (partial compile subscope) true)))))
 
 (fn declare-function [compile scope ast]
-  (if (or ast.locald (= :MemberExpression ast.id.kind))
-      (doto (function compile scope ast)
-        (table.insert 2 (compile scope ast.id)))
-      (list (sym :set-forcibly!)
-            (compile scope ast.id)
-            (function compile scope ast))))
+  (let [target (if (or ast.locald (= :MemberExpression ast.id.kind))
+                   (compile scope ast.id)
+                   (sym (.. "_G." ast.id.name)))]
+    (doto (function compile scope ast)
+      (table.insert 2 target))))
 
 (fn identifier [ast]
   (if (and (ast.name:find "^[-_0-9]+$") (ast.name:find "[0-9]"))
