@@ -8,6 +8,8 @@ local function _()
    ids[k] = ast:var_declare(vlist[k])
 end
 
+function abc(x) return x+9 end
+
 local function noprint() end
 
 SCREAMING_SNAKE = true

@@ -7,6 +7,8 @@
     (global foo bar)
     (tset ids k (ast:var_declare (. vlist k)))))
 
+(fn _G.abc [x] (+ x 9))
+
 (fn noprint [])
 
 (global SCREAMING_SNAKE true)
