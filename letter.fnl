@@ -82,5 +82,4 @@ When f returns a truthy value, recursively walks the children."
           (values i v))))
   (values iter t (+ (# t) 1)))
 
-(fn compile [ast]
-  (walk-tree ast letter reverse-ipairs))
+{:compile (fn [ast] (walk-tree ast letter reverse-ipairs))}

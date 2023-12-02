@@ -54,7 +54,7 @@
   (let [ls (lex-setup rdr filename comments)
         ast-builder (lua-ast.New mangle)
         ast-tree (parse ast-builder ls)]
-    (letter (compiler nil ast-tree))))
+    (letter.compile (compiler nil ast-tree))))
 
 (if (and (and debug debug.getinfo) (= (debug.getinfo 3) nil))
     (let [;; run as a script
@@ -69,6 +69,7 @@
                                              comments))]
                 (print (.. (fnlfmt.fnlfmt code) "\n"))))
           (do
+            (print "Antifennel version 0.3.0-dev.")
             (print (: "Usage: %s [--comments] LUA_FILENAME" :format (. arg 0)))
             (print "Compiles LUA_FILENAME to Fennel and prints output.")
             (os.exit 1))))

@@ -73,4 +73,7 @@ install: antifennel
 uninstall:
 	rm -f $(DESTDIR)$(BIN_DIR)/antifennel
 
-.PHONY: test self clean ci update update-fennel update-tests install
+check:
+	fennel-ls --check anticompiler.fnl letter.fnl
+
+.PHONY: test self clean ci update update-fennel update-tests install check

@@ -51,7 +51,7 @@ local function compile(rdr, filename, comments)
    local ls = lex_setup(rdr, filename, comments)
    local ast_builder = lua_ast.New(mangle)
    local ast_tree = parse(ast_builder, ls)
-   return letter(compiler(nil, ast_tree))
+   return letter.compile(compiler(nil, ast_tree))
 end
 
 if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
@@ -71,6 +71,7 @@ if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
          print(fnlfmt.fnlfmt(code) .. "\n")
       end
    else
+      print("Antifennel version 0.3.0-dev.")
       print(("Usage: %s [--comments] LUA_FILENAME"):format(arg[0]))
       print("Compiles LUA_FILENAME to Fennel and prints output.")
       os.exit(1)
