@@ -1,7 +1,6 @@
-image: debian/buster
-packages:
-  - luajit
-  - make
-  - git
-tasks:
-- test: make -C antifennel ci
+# -*- js -*-
+{
+    "image": "debian/stable",
+    "packages": ["git", "make", "luajit2"],
+    "tasks": [{"test":"make -C antifennel ci"}],
+}
