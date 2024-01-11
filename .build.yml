@@ -1,6 +1,6 @@
 # -*- js -*-
 {
     "image": "debian/stable",
-    "packages": ["git", "make", "luajit2"],
-    "tasks": [{"test":"make -C antifennel ci"}],
+    "packages": ["git", "make", "luajit2", "lua5.4"],
+    "tasks": [{"test":"make -C antifennel test"}],
 }

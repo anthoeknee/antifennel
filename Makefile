@@ -63,8 +63,6 @@ lang/%.fnl: lang/%.lua anticompiler.fnl
 
 clean: ; rm -f lang/*.fnl antifennel.fnl antifennel
 
-ci: test count
-
 count: ; cloc $(PARSER_FENNEL) anticompiler.fnl antifennel.lua
 
 install: antifennel
