@@ -41,6 +41,10 @@
 
 (set-forcibly! f 59)
 
+(var determination nil)
+
+(set determination (fn [hopes] (+ hopes _G.dreams)))
+
 (let [;; here
       (boo twenty) (values :hoo 20)
       fifteen 15]

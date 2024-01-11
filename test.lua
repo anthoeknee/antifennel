@@ -36,6 +36,10 @@ end
 
 f = 59
 
+local determination
+
+function determination(hopes) return hopes+_G.dreams end
+
 do
    -- here
    local boo, twenty = "hoo", 20

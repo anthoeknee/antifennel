@@ -43,12 +43,22 @@
     (list (sym :fn) (sequence (unpack params))
           (unpack (map body (partial compile subscope) true)))))
 
+(fn varize-local! [scope name]
+  (match (. scope name)
+    {: ast} (tset ast 1 :var)))
+
 (fn declare-function [compile scope ast]
-  (let [target (if (or ast.locald (= :MemberExpression ast.id.kind))
-                   (compile scope ast.id)
-                   (sym (.. "_G." ast.id.name)))]
-    (doto (function compile scope ast)
-      (table.insert 2 target))))
+  (if (or ast.locald (= :MemberExpression ast.id.kind))
+      (doto (function compile scope ast)
+        (table.insert 2 (compile scope ast.id)))
+      (not (. scope ast.id.name))
+      (doto (function compile scope ast)
+        (table.insert 2 (sym (.. "_G." ast.id.name))))
+      (do
+        (varize-local! scope ast.id.name)
+        (list (sym :set)
+              (compile scope ast.id)
+              (function compile scope ast)))))
 
 (fn identifier [ast]
   (if (and (ast.name:find "^[-_0-9]+$") (ast.name:find "[0-9]"))
@@ -234,10 +244,6 @@
             (. left 1 :property :name)
             (compile scope (. left 1 :property)))
         right-out))
-
-(fn varize-local! [scope name]
-  (match (. scope name)
-    {: ast} (tset ast 1 :var)))
 
 (fn setter-for [scope names]
   (let [kinds (map names #(match (or (. scope $) $) {: kind} kind _ :global))
