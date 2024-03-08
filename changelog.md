@@ -1,7 +1,8 @@
 # Summary of user-visible changes
 
-## 0.3.0 / ???
+## 0.3.0 / 2024-03-07
 
+* Use version 1.4.2 of Fennel and 0.3.1 of fnlfmt.
 * Turn `foo["x"] = y` assignments into multisym `(set foo.x y)` assignments.
 * Compile global functions to `(fn _G.f [] ...)` instead of `set-forcibly!`
 * Compile `t.f = function` to `(fn t.f [] ...)` without `set`.

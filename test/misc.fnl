@@ -128,7 +128,7 @@
   (t.= (fennel.eval "(select :# (#(values)))") 0)
   (let [broken-code (fennel.compile "(local [x] (values)) (local {: y} (values))")]
     (t.is broken-code "code should compile")
-    (t.error broken-code "code should fail at runtime")))
+    (t.error "attempt to call a string" broken-code "should fail at runtime")))
 
 (fn test-short-circuit []
   (let [method-code "(var shorted? false)
@@ -150,6 +150,10 @@
  :butterfly-eye 7 :bee-body-2 7 :dying-plant 7 8 8 9 9}"
         tbl (fennel.eval code)]
     (t.= (. tbl 8) 8)))
+
+(fn test-multisyms []
+  (t.is (pcall fennel.eval "(let [x {:0 #$1 :& #$1}] (x:0) (x:&) (x.0) (x.&))" {:allowedGlobals false})
+        "Expected to be able to use multisyms with digits and & in their second part"))
 
 {: setup
 

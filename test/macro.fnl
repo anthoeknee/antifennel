@@ -1,10 +1,13 @@
+(local unpack (or _G.unpack table.unpack))
 (local t (require :test.faith))
 (local fennel (require :fennel))
+
+(macro view [x] (view x))
 
 (macro == [form expected ?msg ?opts]
   `(let [(ok# val#) (pcall fennel.eval ,(view form) ,?opts)]
      (t.is ok# val#)
-     (t.= val# ,expected ,?msg)))
+     (t.= ,expected val# ,?msg)))
 
 (fn test-arrows []
   (== (-> (+ 85 21) (+ 1) (- 99)) 8)
@@ -92,7 +95,7 @@
 (fn test-relative-filename []
   ;; manual pcall instead of == macro for smaller failure message
   (let [(ok? val) (pcall require :test.relative-filename)]
-    (t.is ok? "... had bad filename")
+    (t.is ok? val)
     (t.= val 2)))
 
 (fn test-require-macros []
@@ -732,7 +735,60 @@
           (splice {:greetings "comrade"}))
       {:hello "world" :greetings "comrade"}))
 
-{: test-arrows
+(fn test-assert-repl []
+  (set _G.x 3)
+  (let [inputs ["x\n" "(inc x)\n" "(length hello)\n" ",return 22\n"]
+        outputs []
+        _ (do (set fennel.repl.readChunk #(table.remove inputs 1))
+              (set fennel.repl.onValues (fn [[x]] (table.insert outputs x))))
+        form (view (let [hello :world]
+                     (fn inc [x] (+ x 1))
+                     (fn g [x]
+                       (assert-repl (< x 2000) "AAAAAH" "WAHHHH"))
+                     (fn f [x] (g (* x 2)))
+                     (f 28)
+                     (f 1010)))]
+    (t.= [true 22]
+         [(pcall fennel.eval form)])
+    (t.= [] inputs)
+    (t.= ["AAAAAH" "2020" "2021" "5" "22"]
+         [(string.gsub (. outputs 1) "%s*stack traceback:.*" "")
+          (unpack outputs 2)])
+    (t.= [(assert-repl :a-string :b-string :c-string)] [:a-string :b-string :c-string])
+    ;; Set REPL to return immediately for next assertions
+    (set fennel.repl.readChunk #",return nil")
+    (set fennel.repl.onError #nil)
+    (set fennel.repl.onValues #nil)
+    (let [form (view (assert-repl false "oh no"))
+          multi-args-form (view (assert-repl (select 1 :a :b nil nil :c)))
+          (ok? msg) (pcall fennel.eval form)]
+      (t.= false ok? "assertion should fail from repl when returning nil")
+      (t.= [true :a :b nil nil :c] [(pcall fennel.eval multi-args-form)]
+           "assert-repl should pass along all runtime ret vals upon success"))))
+
+(fn test-assert-as-repl []
+  (set fennel.repl.readChunk #",return :nerevar")
+  (set fennel.repl.onValues #nil)
+  (let [form (view (assert nil "you nwah"))
+        (ok? val) (pcall fennel.eval form {:assertAsRepl true})]
+    (t.is ok? "should be able to recover from nil assertion.")
+    (t.= "nerevar" val)))
+
+(fn test-lambda []
+  (lambda arglist-lambda [x]
+    "docstring"
+    {:fnl/arglist [y]}
+    (do :something))
+  (t.= [:y] (. fennel.metadata arglist-lambda :fnl/arglist))
+  (let [l2 (lambda [x]
+             "docstring"
+             {:fnl/arglist [z]}
+             (do :something))]
+    (t.= [:z] (. fennel.metadata l2 :fnl/arglist))))
+
+{:teardown #(each [k (pairs fennel.repl)]
+              (tset fennel.repl k nil))
+ : test-arrows
  : test-doto
  : test-?.
  : test-import-macros
@@ -748,7 +804,10 @@
  : test-case
  : test-lua-module
  : test-disabled-sandbox-searcher
+ : test-assert-repl
+ : test-assert-as-repl
  : test-expand
  : test-match-try
  : test-case-try
+ : test-lambda
  : test-literal}

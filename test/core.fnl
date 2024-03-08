@@ -111,7 +111,11 @@
   (== [(pick-values 4 :a :b :c (values :d :e))] ["a" "b" "c" "d"])
   (== ((fn [a & [b {: c}]] (string.format a (+ b c))) "haha %s" 4 {:c 3})
       "haha 7")
-  (== ((fn [& {1 _ 2 _ 3 x}] x) :one :two :three) "three"))
+  (== ((fn [& {1 _ 2 _ 3 x}] x) :one :two :three) "three")
+  (== (tail! (select 1 :hi))
+      "hi")
+  (== (if (= 1 1) (tail! (select 1 :yes)) (tail! (select 1 :no)))
+      "yes"))
 
 (fn test-conditionals []
   (== (if _G.non-existent 1 (* 3 9)) 27)
@@ -212,6 +216,8 @@
 (fn test-if []
   (== (if (values 1 2) 3 4) 3)
   (== (if (values 1) 3 4) 3)
+  (== (if _G.nothing :no true :yes) :yes)
+  (== (if true :haha-yesss) :haha-yesss)
   (== (let [x (if false 3 (values 2 5))] x) 2)
   (== (do (fn myfn [x y z] (+ x y z))
           (myfn 1 (if 1 (values 2 5) 3) 4))
@@ -287,6 +293,9 @@
   (== (let [(_ m) (pcall #(. 1 1))]
         (m:match "attempt to index a number"))
       "attempt to index a number")
+  ;; ensure (. (some-macro) k1 ...) doesn't allow invalid Lua output
+  (== (do (macro identity [...] ...) (. (identity {:x 1 :y 2 :z 3}) :y))
+      2)
   (== (. (let [t (let [t {} k :a] (tset t k 123) t) k :b]
            (tset t k 321)
            t) :a) 123)

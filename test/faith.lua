@@ -45,7 +45,7 @@ local function get_where(start)
   local _, _0, where = traceback:find("\n *([^:]+:[0-9]+):")
   return (where or "?")
 end
-local checked = nil
+local checked = 0
 local function pass()
   return {char = ".", type = "pass"}
 end
@@ -61,27 +61,17 @@ local function is(got, _3fmsg)
     return error({char = "F", msg = _3fmsg, reason = string.format("Expected truthy value"), tostring = fail__3estring, type = "fail", where = get_where(4)})
   end
 end
-local function error_2a(f, _3fmsg)
+local function error_2a(pat, f, _3fmsg)
   local _7_0, _8_0 = pcall(f)
-  if ((_7_0 == true) and (nil ~= _8_0)) then
-    local val = _8_0
+  if ((_7_0 == true) and true) then
+    local _3fval = _8_0
     checked = (checked + 1)
     if not false then
-      return error({char = "F", msg = _3fmsg, reason = string.format("Expected an error, got %s", fennel.view(val)), tostring = fail__3estring, type = "fail", where = get_where(4)})
+      return error({char = "F", msg = _3fmsg, reason = string.format("Expected an error, got %s", fennel.view(_3fval)), tostring = fail__3estring, type = "fail", where = get_where(4)})
     end
-  end
-end
-local function error_match(pat, f, _3fmsg)
-  local _11_0, _12_0 = pcall(f)
-  if ((_11_0 == true) and (nil ~= _12_0)) then
-    local val = _12_0
-    checked = (checked + 1)
-    if not false then
-      return error({char = "F", msg = _3fmsg, reason = string.format("Expected an error, got %s", fennel.view(val)), tostring = fail__3estring, type = "fail", where = get_where(4)})
-    end
-  elseif (true and (nil ~= _12_0)) then
-    local _ = _11_0
-    local err = _12_0
+  elseif (true and (nil ~= _8_0)) then
+    local _ = _7_0
+    local err = _8_0
     local err_string = nil
     if (type(err) == "string") then
       err_string = err
@@ -95,7 +85,7 @@ local function error_match(pat, f, _3fmsg)
   end
 end
 local function extra_fields_3f(t, keys)
-  local function _17_()
+  local function _13_()
     local extra_3f = false
     for k in pairs(t) do
       if extra_3f then break end
@@ -108,11 +98,11 @@ local function extra_fields_3f(t, keys)
     end
     return extra_3f
   end
-  return (_17_() or next(keys))
+  return (_13_() or next(keys))
 end
 local function table_3d(x, y, equal_3f)
   local keys = {}
-  local function _19_()
+  local function _15_()
     local same_3f = true
     for k, v in pairs(x) do
       if not same_3f then break end
@@ -121,10 +111,10 @@ local function table_3d(x, y, equal_3f)
     end
     return same_3f
   end
-  return (_19_() and not extra_fields_3f(y, keys))
+  return (_15_() and not extra_fields_3f(y, keys))
 end
 local function equal_3f(x, y)
-  return ((x == y) or ((function(_20_,_21_,_22_) return (_20_ == _21_) and (_21_ == _22_) end)(type(x),"table",type(y)) and table_3d(x, y, equal_3f)))
+  return ((x == y) or ((function(_16_,_17_,_18_) return (_16_ == _17_) and (_17_ == _18_) end)(type(x),"table",type(y)) and table_3d(x, y, equal_3f)))
 end
 local function _3d_2a(exp, got, _3fmsg)
   checked = (checked + 1)
@@ -213,27 +203,27 @@ local function dot(c, ran)
   end
   return (io.stdout):flush()
 end
-local function print_totals(_34_0)
-  local _35_ = _34_0
-  local ended_at = _35_["ended-at"]
-  local err = _35_["err"]
-  local fail = _35_["fail"]
-  local pass0 = _35_["pass"]
-  local skip0 = _35_["skip"]
-  local started_at = _35_["started-at"]
+local function print_totals(_30_0)
+  local _31_ = _30_0
+  local ended_at = _31_["ended-at"]
+  local err = _31_["err"]
+  local fail = _31_["fail"]
+  local pass0 = _31_["pass"]
+  local skip0 = _31_["skip"]
+  local started_at = _31_["started-at"]
   local duration = nil
-  local function _36_(start, _end)
+  local function _32_(start, _end)
     local decimal_places = 2
-    return (("%." .. tonumber(decimal_places) .. "f")):format(math.max((_end - start), math.pow(10, ( - decimal_places))))
+    return (("%." .. tonumber(decimal_places) .. "f")):format(math.max((_end - start), (10 ^ ( - decimal_places))))
   end
-  duration = _36_
-  local _37_
+  duration = _32_
+  local _33_
   if started_at.real then
-    _37_ = ("in %s second(s)"):format(duration(started_at.real, ended_at.real))
+    _33_ = ("in %s second(s)"):format(duration(started_at.real, ended_at.real))
   else
-    _37_ = ("in approximately %s second(s)"):format((ended_at.approx - started_at.approx))
+    _33_ = ("in approximately %s second(s)"):format((ended_at.approx - started_at.approx))
   end
-  return print((("Testing finished %s with %d assertion(s)\n" .. "%d passed, %d failed, %d error(s), %d skipped\n" .. "%.2f second(s) of CPU time used")):format(_37_, checked, count(pass0), count(fail), count(err), count(skip0), duration(started_at.cpu, ended_at.cpu)))
+  return print((("Testing finished %s with %d assertion(s)\n" .. "%d passed, %d failed, %d error(s), %d skipped\n" .. "%.2f second(s) of CPU time used")):format(_33_, checked, count(pass0), count(fail), count(err), count(skip0), duration(started_at.cpu, ended_at.cpu)))
 end
 local function begin_module(s_env, tests)
   return print(string.format("\nStarting module %s with %d test(s)", s_env.name, count(tests)))
@@ -250,61 +240,60 @@ local function done(results)
   return print_totals(results)
 end
 local default_hooks = nil
-local function _40_(_name, result, ran)
+local function _36_(_name, result, ran)
   return dot(result.char, ran)
 end
-default_hooks = {["begin-module"] = begin_module, ["begin-test"] = false, ["end-module"] = false, ["end-test"] = _40_, begin = false, done = done}
+default_hooks = {["begin-module"] = begin_module, ["begin-test"] = false, ["end-module"] = false, ["end-test"] = _36_, begin = false, done = done}
 local function test_key_3f(k)
   return ((type(k) == "string") and k:match("^test.*"))
 end
 local ok_types = {fail = true, pass = true, skip = true}
 local function err_handler(name)
-  local function _41_(e)
+  local function _37_(e)
     if ((type(e) == "table") and ok_types[e.type]) then
       return e
     else
       return error_result(fennel.traceback(string.format("\nERROR: %s:\n%s\n", name, e), 4))
     end
   end
-  return _41_
+  return _37_
 end
 local function run_test(name, _3fsetup, test, _3fteardown, module_result, hooks, context)
   if fn_3f(hooks["begin-test"]) then
     hooks["begin-test"](name)
   end
-  local started_at = now()
   local result = nil
-  local function _44_(...)
-    local _45_0, _46_0 = ...
-    if (_45_0 == true) then
-      local function _47_(...)
-        local _48_0, _49_0 = ...
-        if (_48_0 == true) then
+  local function _40_(...)
+    local _41_0, _42_0 = ...
+    if (_41_0 == true) then
+      local function _43_(...)
+        local _44_0, _45_0 = ...
+        if (_44_0 == true) then
           return pass()
-        elseif (true and (nil ~= _49_0)) then
-          local _ = _48_0
-          local err = _49_0
+        elseif (true and (nil ~= _45_0)) then
+          local _ = _44_0
+          local err = _45_0
           return err
         end
       end
-      local function _51_()
+      local function _47_()
         return test(unpack(context))
       end
-      return _47_(xpcall(_51_, err_handler(name)))
-    elseif (true and (nil ~= _46_0)) then
-      local _ = _45_0
-      local err = _46_0
+      return _43_(xpcall(_47_, err_handler(name)))
+    elseif (true and (nil ~= _42_0)) then
+      local _ = _41_0
+      local err = _42_0
       return err
     end
   end
-  local function _53_()
+  local function _49_()
     if _3fsetup then
       return xpcall(_3fsetup, err_handler(name))
     else
       return true
     end
   end
-  result = _44_(_53_())
+  result = _40_(_49_())
   if _3fteardown then
     pcall(_3fteardown, unpack(context))
   end
@@ -316,12 +305,12 @@ local function run_test(name, _3fsetup, test, _3fteardown, module_result, hooks,
 end
 local function run_setup_all(setup_all, results, module_name)
   if fn_3f(setup_all) then
-    local _56_0 = {pcall(setup_all)}
-    if ((_G.type(_56_0) == "table") and (_56_0[1] == true)) then
-      local context = {select(2, (table.unpack or _G.unpack)(_56_0))}
+    local _52_0 = {pcall(setup_all)}
+    if ((_G.type(_52_0) == "table") and (_52_0[1] == true)) then
+      local context = {select(2, (table.unpack or _G.unpack)(_52_0))}
       return context
-    elseif ((_G.type(_56_0) == "table") and (_56_0[1] == false) and (nil ~= _56_0[2])) then
-      local err = _56_0[2]
+    elseif ((_G.type(_52_0) == "table") and (_52_0[1] == false) and (nil ~= _52_0[2])) then
+      local err = _52_0[2]
       local msg = ("ERROR in test module %s setup-all: %s"):format(module_name, err)
       results.err[module_name] = error_result(msg)
       return nil, err
@@ -333,9 +322,9 @@ end
 local function run_module(hooks, results, module_name, test_module)
   assert(("table" == type(test_module)), ("test module must be table: " .. module_name))
   local result = result_table(module_name)
-  local _59_0 = run_setup_all(test_module["setup-all"], results, module_name)
-  if (nil ~= _59_0) then
-    local context = _59_0
+  local _55_0 = run_setup_all(test_module["setup-all"], results, module_name)
+  if (nil ~= _55_0) then
+    local context = _55_0
     if hooks["begin-module"] then
       hooks["begin-module"](result, test_module)
     end
@@ -346,9 +335,9 @@ local function run_module(hooks, results, module_name, test_module)
       end
     end
     do
-      local _62_0 = test_module["teardown-all"]
-      if (nil ~= _62_0) then
-        local teardown = _62_0
+      local _58_0 = test_module["teardown-all"]
+      if (nil ~= _58_0) then
+        local teardown = _58_0
         pcall(teardown, unpack(context))
       end
     end
@@ -381,12 +370,12 @@ local function run(module_names, _3fhooks)
     hooks.begin(results, module_names)
   end
   for _, module_name in ipairs(module_names) do
-    local _69_0, _70_0 = pcall(require, module_name)
-    if ((_69_0 == true) and (nil ~= _70_0)) then
-      local test_mod = _70_0
+    local _65_0, _66_0 = pcall(require, module_name)
+    if ((_65_0 == true) and (nil ~= _66_0)) then
+      local test_mod = _66_0
       run_module(hooks, results, module_name, test_mod)
-    elseif ((_69_0 == false) and (nil ~= _70_0)) then
-      local err = _70_0
+    elseif ((_65_0 == false) and (nil ~= _66_0)) then
+      local err = _66_0
       results.err[module_name] = error_result(("ERROR: Cannot load %q:\n%s"):format(module_name, err))
     end
   end
@@ -398,4 +387,13 @@ local function run(module_names, _3fhooks)
     return exit(hooks)
   end
 end
-return {["<"] = _3c_2a, ["<="] = _3c_3d_2a, ["="] = _3d_2a, ["almost="] = almost_3d, ["error-match"] = error_match, ["not-match"] = not_match, ["not="] = not_3d_2a, error = error_2a, identical = identical, is = is, match = match_2a, run = run, skip = skip, version = "0.1.2"}
+if (... == "--tests") then
+  local function _71_(...)
+    local _70_0 = {...}
+    table.remove(_70_0, 1)
+    return _70_0
+  end
+  run(_71_(...))
+  os.exit(0)
+end
+return {["<"] = _3c_2a, ["<="] = _3c_3d_2a, ["="] = _3d_2a, ["almost="] = almost_3d, ["not-match"] = not_match, ["not="] = not_3d_2a, error = error_2a, identical = identical, is = is, match = match_2a, run = run, skip = skip, version = "0.1.3-dev"}

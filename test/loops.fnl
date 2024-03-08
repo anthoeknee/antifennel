@@ -16,7 +16,11 @@
           (each [_ x (values f (doto s (table.remove 1)))] (set t (+ t x))) t) 5)
   (== (do (var t 0) (local (f s v) (pairs [1 2 3]))
           (each [_ x (values f s v)] (set t (+ t x))) t) 6)
-  (== (do (var x 0) (while (< x 7) (set x (+ x 1))) x) 7))
+  (== (do (var x 0) (while (< x 7) (set x (+ x 1))) x) 7)
+  (== (let [x [] y [1 2 3]]
+        (each [(i n) (ipairs y)]
+          (table.insert x (+ i n)))
+        x) [2 4 6]))
 
 (fn test-for []
   (== (for [y 0 2] nil) nil)
@@ -56,6 +60,14 @@
   (== (do (macro twice [expr] `(do ,expr ,expr))
           (twice (icollect [i v (ipairs [:a :b :c])] v)))
       [:a :b :c])
+  (== (let [result [0]]
+        (icollect [_ v (ipairs [1 2 [3 4 5] 6 7]) &into result]
+          (case (type v)
+            :table (do
+                     (icollect [_ e (ipairs v) &into result] e)
+                     nil)
+            _ v)))
+      [0 1 2 3 4 5 6 7])
   (== (fcollect [i 1 4] i)
       [1 2 3 4])
   (== (fcollect [i 1 4 2] i)
