@@ -71,7 +71,7 @@ if debug and debug.getinfo and debug.getinfo(3) == nil then -- run as a script
          print(fnlfmt.fnlfmt(code) .. "\n")
       end
    else
-      print("Antifennel version 0.3.0-dev.")
+      print("Antifennel version 0.3.0.")
       print(("Usage: %s [--comments] LUA_FILENAME"):format(arg[0]))
       print("Compiles LUA_FILENAME to Fennel and prints output.")
       os.exit(1)
