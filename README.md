@@ -23,7 +23,7 @@ Pass in the `--comments` flag to enable limited support for comments.
 
 The Antifennel compiler assumes its input file is valid Lua; it does
 not attempt to give good error messages when provided with files that
-won't parse or support newer features of Lua.
+won't parse or require newer features of Lua.
 
 Antifennel supports all [bitwise operators](https://www.lua.org/manual/5.3/manual.html#3.4.2)
 introduced in Lua 5.3.
@@ -92,8 +92,7 @@ work, the multi-valued expression must be the last one in the Lua output.
 
 ## Integration
 
-Included with
-[fennel-mode](https://git.sr.ht/~technomancy/fennel-mode/)
+Included with [fennel-mode](https://git.sr.ht/~technomancy/fennel-mode/)
 is an
 [antifennel.el](https://git.sr.ht/~technomancy/fennel-mode/tree/main/item/antifennel.el)
 file which provides integration to run from inside Emacs.
@@ -112,7 +111,7 @@ Send patches directly to the maintainer or the
 Depends on [fnlfmt](https://git.sr.ht/~technomancy/fnlfmt) which is
 included and is distributed under the same license terms.
 
-Copyright © 2020-2023 Phil Hagelberg and contributors
+Copyright © 2020-2024 Phil Hagelberg and contributors
 Released under the MIT/X11 license, same as Fennel
 
 Lua parser/lexer (contents of the `lang/` directory) 

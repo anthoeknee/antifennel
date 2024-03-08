@@ -2,6 +2,7 @@
 
 ## 0.3.0 / ???
 
+* Turn `foo["x"] = y` assignments into multisym `(set foo.x y)` assignments.
 * Compile global functions to `(fn _G.f [] ...)` instead of `set-forcibly!`
 * Compile `t.f = function` to `(fn t.f [] ...)` without `set`.
 * Refuse to compile multivals at the end of mixed tables.

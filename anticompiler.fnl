@@ -27,6 +27,11 @@
         (tset seen x true)
         x))))
 
+(fn symlike? [str]
+  (and (str:find "^[a-zA-Z0-9%*]") (not (str:find "%."))
+       (accumulate [ok true char (str:gmatch ".") &until (not ok)]
+         (sym-char? (char:byte)))))
+
 (fn p [x] (print (view x))) ; debugging
 
 (fn make-scope [parent]
@@ -278,6 +283,13 @@
     (tset :kind :FunctionDeclaration)
     (tset :id member-expression)))
 
+(fn decompute-assignment! [left]
+  (each [_ x (ipairs left)]
+    (when (and x.property (= :string (type x.property.value))
+               (= x.property.kind "Literal") (symlike? x.property.value))
+      (set x.computed false)
+      (set x.property {:kind "Identifier" :name x.property.value}))))
+
 (fn assignment [compile scope ast]
   (let [{: left : right} ast
         right-out (if (= 1 (length right))
@@ -286,6 +298,7 @@
                       (sym :nil)
                       (list (sym :values)
                             (unpack (map right (partial compile scope)))))]
+    (decompute-assignment! left)
     (if (any-computed? (. left 1))
         (tset* compile scope left right-out ast)
         ;; a.b = function() ...

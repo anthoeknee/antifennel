@@ -19,6 +19,10 @@
 
 (: (. t :t2 :t4) :f)
 
+(set (t.t2.a t.t2.b) (values :hahahah :bbb))
+
+(tset t.t2 "rofl copter" :lol)
+
 (each [k v (pairs {:a 1})]
   (set-forcibly! k :c))
 

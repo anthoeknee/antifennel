@@ -19,6 +19,9 @@ SCREAMING_SNAKE = true
 local t = {t2={t4={f=function(x) return x end}}}
 (t["t2"]["t4"]):f()
 
+t.t2["a"], t.t2["b"] = "hahahah", "bbb"
+t.t2["rofl copter"] = "lol"
+
 for k,v in pairs({a=1}) do k="c" end
 
 local append = "two"
