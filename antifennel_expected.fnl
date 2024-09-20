@@ -1,7 +1,5 @@
 (local fennel (require :fennel))
 
-(set debug.traceback fennel.traceback)
-
 ;; our lexer was written for luajit; let's add a compatibility shim for PUC
 
 (when (not (pcall require :ffi))
@@ -19,12 +17,6 @@
                        (table.insert (or package.loaders package.searchers) 1
                                      fennel.searcher))
     (table.insert (or package.loaders package.searchers) fennel.searcher))
-
-(local lex-setup (require :antifnl.lexer))
-
-(local parse (require :antifnl.parser))
-
-(local lua-ast (require :antifnl.lua_ast))
 
 (local reader (require :antifnl.reader))
 
@@ -51,7 +43,10 @@
   name)
 
 (fn compile [rdr filename comments]
-  (let [ls (lex-setup rdr filename comments)
+  (let [lex-setup (require :antifnl.lexer)
+        lua-ast (require :antifnl.lua_ast)
+        parse (require :antifnl.parser)
+        ls (lex-setup rdr filename comments)
         ast-builder (lua-ast.New mangle)
         ast-tree (parse ast-builder ls)]
     (letter.compile (compiler nil ast-tree))))
