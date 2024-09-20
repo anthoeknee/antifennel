@@ -1,4 +1,4 @@
-local operator = require("lang.operator")
+local operator = require("antifnl.operator")
 
 local LJ_52 = false
 
@@ -484,7 +484,7 @@ local function parse_stmt(ast, ls)
     return stmt, false
 end
 
-local function parse_params(ast, ls, needself)
+local function parse_params(_ast, ls, needself)
     lex_check(ls, "(")
     local args = { }
     local vararg = false
@@ -513,14 +513,14 @@ local function parse_params(ast, ls, needself)
     return args, vararg
 end
 
-local function new_proto(ls, varargs)
+local function new_proto(_ls, varargs)
     return { varargs = varargs }
 end
 
 local function parse_block_stmts(ast, ls)
     local firstline = ls.linenumber
-    local stmt, islast = nil, false
-    local body = { }
+    local islast, stmt = false
+    local body = {}
     while not islast and not EndOfBlock[ls.token] do
         if ls.token == 'TK_comment' then
             stmt = ast:comment(ls.tokenval)
@@ -535,7 +535,7 @@ local function parse_block_stmts(ast, ls)
 end
 
 local function parse_chunk(ast, ls)
-    local body, firstline, lastline = parse_block_stmts(ast, ls)
+    local body, _, lastline = parse_block_stmts(ast, ls)
     return ast:chunk(body, ls.chunkname, 0, lastline)
 end
 

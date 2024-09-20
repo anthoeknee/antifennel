@@ -9,12 +9,17 @@ local ASCII_A, ASCII_Z = 65, 90
 
 local END_OF_STREAM = -1
 
-local ReservedKeyword = {['and'] = 1, ['break'] = 2, ['do'] = 3, ['else'] = 4, ['elseif'] = 5, ['end'] = 6, ['false'] = 7, ['for'] = 8, ['function'] = 9, ['goto'] = 10, ['if'] = 11, ['in'] = 12, ['local'] = 13, ['nil'] = 14, ['not'] = 15, ['or'] = 16, ['repeat'] = 17, ['return'] = 18, ['then'] = 19, ['true'] = 20, ['until'] = 21, ['while'] = 22 }
+local ReservedKeyword = {['and'] = 1, ['break'] = 2, ['do'] = 3, ['else'] = 4,
+    ['elseif'] = 5, ['end'] = 6, ['false'] = 7, ['for'] = 8,
+    ['function'] = 9, ['goto'] = 10, ['if'] = 11, ['in'] = 12, ['local'] = 13,
+    ['nil'] = 14, ['not'] = 15, ['or'] = 16, ['repeat'] = 17, ['return'] = 18,
+    ['then'] = 19, ['true'] = 20, ['until'] = 21, ['while'] = 22 }
 
 local uint64, int64 = ffi.typeof('uint64_t'), ffi.typeof('int64_t')
 local complex = ffi.typeof('complex')
 
-local TokenSymbol = { TK_ge = '>=', TK_le = '<=' , TK_concat = '..', TK_eq = '==', TK_ne = '~=', TK_eof = '<eof>',
+local TokenSymbol = { TK_ge = '>=', TK_le = '<=' , TK_concat = '..',
+                      TK_eq = '==', TK_ne = '~=', TK_eof = '<eof>',
                       TK_shl = '<<', TK_shr = '>>' }
 
 local function token2str(tok)
@@ -514,7 +519,6 @@ end
 local LexerClass = { __index = Lexer }
 
 local function lex_setup(read_func, chunkname, comments)
-    local header = false
     local ls = {
         n = 0,
         tklookahead = 'TK_eof', -- No look-ahead token.
@@ -531,7 +535,6 @@ local function lex_setup(read_func, chunkname, comments)
         ls.n = ls.n - 2
         ls.p = ls.p + 2
         nextchar(ls)
-        header = true
     end
     if ls.current == '#' then
         local function nc()
@@ -541,7 +544,6 @@ local function lex_setup(read_func, chunkname, comments)
         end
         nc()
         inclinenumber(ls)
-        header = true
     end
     return setmetatable(ls, LexerClass)
 end
