@@ -2,6 +2,10 @@ LUA ?= luajit
 DESTDIR ?=
 PREFIX ?= /usr/local
 BIN_DIR ?= $(PREFIX)/bin
+MAN_DIR ?= $(PREFIX)/share/man/man1
+
+FENNEL ?= ./fennel
+FENNEL_OPTS ?= --skip-include ffi --require-as-include --compile
 
 PARSER_LUA=antifnl/reader.lua \
 		antifnl/operator.lua \
@@ -19,14 +23,14 @@ PARSER_FENNEL=antifnl/reader.fnl \
 
 antifennel: antifennel.fnl anticompiler.fnl letter.fnl $(PARSER_FENNEL)
 	echo "#!/usr/bin/env $(LUA)" > $@
-	$(LUA) ./fennel --skip-include ffi --require-as-include --compile $< >> $@
+	$(LUA) $(FENNEL) $(FENNEL_OPTS) $< >> $@
 	chmod 755 $@
 
 test: antifennel self test/fennel.lua
 	diff -u antifennel_expected.fnl antifennel.fnl
 	@$(LUA) antifennel.lua test.lua --comments > test.fnl
 	diff -u test_expected.fnl test.fnl
-	$(LUA) ./fennel --use-bit-lib --globals "*" test.fnl
+	$(LUA) $(FENNEL) --use-bit-lib --globals "*" test.fnl
 	$(LUA) test/init.lua $(TESTS)
 
 # We run the entire fennel test suite on the antifennel'd copy of Fennel.
@@ -51,7 +55,7 @@ update: update-fennel update-tests
 
 test/fennel.lua: fennel.lua anticompiler.fnl
 	$(LUA) antifennel.lua fennel.lua --comments > tmp-fennel.fnl
-	./fennel --compile tmp-fennel.fnl > $@
+	$(FENNEL) --compile tmp-fennel.fnl > $@
 
 antifennel.fnl: antifennel.lua anticompiler.fnl letter.fnl
 	$(LUA) antifennel.lua antifennel.lua --comments > antifennel.fnl
@@ -61,18 +65,25 @@ self: $(PARSER_FENNEL)
 antifnl/%.fnl: antifnl/%.lua anticompiler.fnl
 	$(LUA) antifennel.lua $< --comments > $@
 
-clean: ; rm -f antifnl/*.fnl antifennel.fnl antifennel
+clean: ; rm -f antifnl/*.fnl antifennel.fnl antifennel antifennel.1
 
 count: ; cloc $(PARSER_FENNEL) anticompiler.fnl antifennel.lua
 
-install: antifennel
+install: antifennel antifennel.1
 	mkdir -p $(DESTDIR)$(BIN_DIR) && cp $< $(DESTDIR)$(BIN_DIR)/
+	mkdir -p $(DESTDIR)$(MAN_DIR)
+	cp antifennel.1 $(DESTDIR)$(MAN_DIR)/antifennel.1
 
 uninstall:
-	rm -f $(DESTDIR)$(BIN_DIR)/antifennel
+	rm -f $(DESTDIR)$(BIN_DIR)/antifennel $(DESTDIR)$(MAN_DIR)/antifennel.1
 
 check:
 	luacheck --formatter plain antifennel.lua $(PARSER_LUA)
 	fennel-ls --lint anticompiler.fnl letter.fnl
+
+# this works reasonably well; only gotcha is you have to do -\- instead
+# of -- to avoid getting en dashes in your output >_<
+antifennel.1: manual.md
+	pandoc --standalone -o $@ $<
 
 .PHONY: test self clean ci update update-fennel update-tests install check
