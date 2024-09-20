@@ -3,19 +3,19 @@ DESTDIR ?=
 PREFIX ?= /usr/local
 BIN_DIR ?= $(PREFIX)/bin
 
-PARSER_LUA=lang/reader.lua \
-		lang/operator.lua \
-		lang/id_generator.lua \
-		lang/lua_ast.lua \
-		lang/lexer.lua \
-		lang/parser.lua
+PARSER_LUA=antifnl/reader.lua \
+		antifnl/operator.lua \
+		antifnl/id_generator.lua \
+		antifnl/lua_ast.lua \
+		antifnl/lexer.lua \
+		antifnl/parser.lua
 
-PARSER_FENNEL=lang/reader.fnl \
-		lang/operator.fnl \
-		lang/id_generator.fnl \
-		lang/lua_ast.fnl \
-		lang/lexer.fnl \
-		lang/parser.fnl
+PARSER_FENNEL=antifnl/reader.fnl \
+		antifnl/operator.fnl \
+		antifnl/id_generator.fnl \
+		antifnl/lua_ast.fnl \
+		antifnl/lexer.fnl \
+		antifnl/parser.fnl
 
 antifennel: antifennel.fnl anticompiler.fnl letter.fnl $(PARSER_FENNEL)
 	echo "#!/usr/bin/env $(LUA)" > $@
@@ -58,10 +58,10 @@ antifennel.fnl: antifennel.lua anticompiler.fnl letter.fnl
 
 self: $(PARSER_FENNEL)
 
-lang/%.fnl: lang/%.lua anticompiler.fnl
+antifnl/%.fnl: antifnl/%.lua anticompiler.fnl
 	$(LUA) antifennel.lua $< --comments > $@
 
-clean: ; rm -f lang/*.fnl antifennel.fnl antifennel
+clean: ; rm -f antifnl/*.fnl antifennel.fnl antifennel
 
 count: ; cloc $(PARSER_FENNEL) anticompiler.fnl antifennel.lua
 
@@ -72,6 +72,7 @@ uninstall:
 	rm -f $(DESTDIR)$(BIN_DIR)/antifennel
 
 check:
-	fennel-ls --check anticompiler.fnl letter.fnl
+	luacheck --formatter plain antifennel.lua $(PARSER_LUA)
+	fennel-ls --lint anticompiler.fnl letter.fnl
 
 .PHONY: test self clean ci update update-fennel update-tests install check

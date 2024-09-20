@@ -1,5 +1,4 @@
 local fennel = require('fennel')
-debug.traceback = fennel.traceback
 
 -- our lexer was written for luajit; let's add a compatibility shim for PUC
 if(not pcall(require, "ffi")) then
@@ -19,11 +18,7 @@ else
    table.insert(package.loaders or package.searchers, fennel.searcher)
 end
 
-local lex_setup = require('lang.lexer')
-local parse = require('lang.parser')
-local lua_ast = require('lang.lua_ast')
-local reader = require('lang.reader')
-
+local reader = require('antifnl.reader')
 local compiler = require('anticompiler')
 local letter = require("letter")
 local fnlfmt = require("fnlfmt")
@@ -48,6 +43,10 @@ local function mangle(name, field)
 end
 
 local function compile(rdr, filename, comments)
+   local lex_setup = require('antifnl.lexer')
+   local lua_ast = require('antifnl.lua_ast')
+   local parse = require('antifnl.parser')
+
    local ls = lex_setup(rdr, filename, comments)
    local ast_builder = lua_ast.New(mangle)
    local ast_tree = parse(ast_builder, ls)

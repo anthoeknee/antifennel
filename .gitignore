@@ -1,5 +1,5 @@
-lang/*.fnl
-antifennel.fnl
+/antifnl/*.fnl
+/antifennel.fnl
 /antifennel
 /test.fnl
 /scratch.lua

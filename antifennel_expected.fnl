@@ -20,13 +20,13 @@
                                      fennel.searcher))
     (table.insert (or package.loaders package.searchers) fennel.searcher))
 
-(local lex-setup (require :lang.lexer))
+(local lex-setup (require :antifnl.lexer))
 
-(local parse (require :lang.parser))
+(local parse (require :antifnl.parser))
 
-(local lua-ast (require :lang.lua_ast))
+(local lua-ast (require :antifnl.lua_ast))
 
-(local reader (require :lang.reader))
+(local reader (require :antifnl.reader))
 
 (local compiler (require :anticompiler))
 

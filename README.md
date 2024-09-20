@@ -114,8 +114,8 @@ included and is distributed under the same license terms.
 Copyright © 2020-2024 Phil Hagelberg and contributors
 Released under the MIT/X11 license, same as Fennel
 
-Lua parser/lexer (contents of the `lang/` directory) 
-by [Francesc Abbate](https://github.com/franko/luajit-lang-toolkit)
+Lua parser/lexer (contents of the `antifnl/` directory) 
+Copyright © 2013-2014 [Francesc Abbate](https://github.com/franko/luajit-lang-toolkit)
 
 It has been modified to support newer 5.3+ operators, comments, and to
 add more flexibility around name mangling.

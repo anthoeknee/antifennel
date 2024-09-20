@@ -1,5 +1,9 @@
 # Summary of user-visible changes
 
+## 0.3.1 / ???
+
+* ???
+
 ## 0.3.0 / 2024-03-07
 
 * Use version 1.4.2 of Fennel and 0.3.1 of fnlfmt.
