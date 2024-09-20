@@ -2,6 +2,9 @@
 (local t (require :test.faith))
 (local fennel (require :fennel))
 
+(local env (setmetatable {} {:__index _G}))
+(set env._G env)
+
 (macro view [x] (view x))
 
 (macro == [form expected ?msg ?opts]
@@ -19,6 +22,7 @@
   (== (-?>> :w (. {:w :x}) (. {:x :missing}) (. {:y :z})) nil)
   (== (-?>> :w (. {:w :x}) (. {:x :y}) (. {:y :z})) "z")
   (== (-?> [:a :b] (table.concat :=)) "a=b")
+  (== (let [(result count) (-?> :abc (: :gsub "a" "b"))] count) 1)
   (== (-?>> := (table.concat [:a :b])) "a=b"))
 
 (fn test-doto []
@@ -76,7 +80,7 @@
   (== (do (import-macros {:defn1 defn : ->1} :test.macros)
           (defn join [sep ...] (table.concat [...] sep))
           (join :: :num (->1 5 (* 2) (+ 8))))
-      "num:18")
+      "num:18" nil {: env})
   (== (do (import-macros {: unsandboxed} :test.macros) (unsandboxed))
       "[\"no\" \"sandbox\"]" "should disable sandbox" {:compiler-env _G})
   (let [not-unqualified "(import-macros hi :test.macros) (print (inc 1))"]
@@ -101,7 +105,9 @@
 (fn test-require-macros []
   (== (do (require-macros :test.macros) (->1 9 (+ 2) (* 11))) 121)
   (== (do (require-macros :test.macros)
-          (defn1 hui [x y] (global z (+ x y))) (hui 8 4) z) 12))
+          (defn1 hui [x y] (global z (+ x y)))
+          (hui 8 4) z)
+      12 nil {: env}))
 
 (fn test-inline-macros []
   (== (do (macro five [] 5) (five)) 5)
@@ -116,7 +122,7 @@
           (when2 true :when2)) "when2")
   (== (do (macros {:plus (fn [x y] `(+ ,x ,y))}) (plus 9 9)) 18)
   (== (do (macros {:m (fn [x] (set _G.sided x))}) (m 952) _G.sided) 952
-      "should disable sandbox" {:compiler-env _G})
+      "should disable sandbox" {:compiler-env env : env})
   (== (do (macro n [] 1) (local x (n)) (macro n [] 2) (values x (n)))
       (values 1 2) "macro-macro shadowing should be allowed")
   (== (do (macros (let [noop #nil] {: noop})) (noop))
@@ -127,8 +133,12 @@
                             (: :gsub "table: 0x[0-9a-f]+" "#<TABLE>")
                             (: :gsub "\n%s*" " "))
         code "(macrodebug (when (= 1 1) (let [x :X] {: x})) true)"
-        expected "(if (= 1 1) (do (let [x \"X\"] {:x x})))"]
-    (t.= (eval-normalize code) expected)))
+        expected "(if (= 1 1) (do (let [x \"X\"] {:x x})))"
+        cyclic "(macrodebug (case [1 2] (where (or [x y] [y nil x]) (= 3 (+ x y))) x) true)"]
+    (t.= (eval-normalize code) expected)
+    (t.= (fennel.eval (pick-values 1 (eval-normalize cyclic)))
+         1
+         "cyclic/recursive AST's should serialize to valid syntax")))
 
 ;; many of these are copied wholesale from test-match, pending implementation,
 ;; if match is implemented via case then it should be reasonable to remove much
@@ -508,7 +518,7 @@
      (+ 20 20)))
 
 (fn test-case-try []
-  ;; ensure we do not unify in a sucess path
+  ;; ensure we do not unify in a success path
   ;; these can be sense checked by running match-try with fresh bindings at
   ;; each step
   (== (case-try 10
@@ -736,7 +746,6 @@
       {:hello "world" :greetings "comrade"}))
 
 (fn test-assert-repl []
-  (set _G.x 3)
   (let [inputs ["x\n" "(inc x)\n" "(length hello)\n" ",return 22\n"]
         outputs []
         _ (do (set fennel.repl.readChunk #(table.remove inputs 1))

@@ -2,6 +2,7 @@
 
 ## 0.3.1 / ???
 
+* Update to Fennel 1.5.1.
 * Add manual.
 
 ## 0.3.0 / 2024-03-07

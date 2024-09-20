@@ -86,4 +86,4 @@ check:
 antifennel.1: manual.md
 	pandoc --standalone -o $@ $<
 
-.PHONY: test self clean ci update update-fennel update-tests install check
+.PHONY: test self clean update update-fennel update-tests install check

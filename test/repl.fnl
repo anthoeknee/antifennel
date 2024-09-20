@@ -20,11 +20,15 @@
       (fn opts.onValues [x]
         (when (not= :function (type (. x 1)))
           (table.insert output (table.concat x "\t"))))
-      (fn opts.onError [e-type e lua-src]
+      (fn opts.onError [_e-type e _lua-src]
         (table.insert output (.. "error: " e)))
       (fn opts.registerCompleter [x]
         (set repl-complete x))
       (fn opts.pp [x] x)
+      (set opts.env {: table : math : string : require
+                     : pcall : ipairs :bit _G.bit})
+      (set opts.env._G opts.env)
+      (set opts.error-pinpoint ["«" "»"])
       (fennel.repl opts)))
   (let [repl-send (coroutine.wrap send)]
     (repl-send)
@@ -89,6 +93,14 @@
                             "method completion nests")
     (t.= (comp "ttt:ab") [] "no method completion on numbers")))
 
+(fn test-command-completion []
+  (let [(send comp) (wrap-repl)]
+    (t.= [",doc"] (comp ",do"))
+    (t.= ",doc" (send ",complete ,do"))
+    (t.is (< 5 (length (comp ",")))
+          "readline completion of bare `,` should list all commands")
+    (t.= ",complete" (send ",complete ,complete ,complete"))))
+
 (fn test-help []
   (let [send (wrap-repl)
         help (send ",help")]
@@ -151,9 +163,9 @@
     (t.= "error: Unknown value" err)))
 
 (fn test-compile []
-  (let [send (wrap-repl)
-        result (send ",compile (fn abc [] (+ 43 9))")
-        f "local function abc()\n  return (43 + 9)\nend\nreturn abc"
+  (let [send (wrap-repl {:useMetadata false :keywords {"new" true}})
+        result (send ",compile (fn new [] (+ 43 9))")
+        f "local function _new()\n  return (43 + 9)\nend\nreturn _new"
         err (send ",compile (fn ]")]
     (t.= f result)
     (t.= "error: Couldn't parse input." err)))
@@ -178,10 +190,11 @@
 
 (fn test-options []
   ;; ensure options.useBitLib propagates to repl
-  (let [send (wrap-repl {:useBitLib true :onError (fn [e] (values :ERROR e))})
+  (let [send (wrap-repl {:useBitLib true
+                         :onError (fn [e] (values :ERROR e))})
         bxor-result (send (v (bxor 0 0)))]
     (if _G.jit
-      (t.= bxor-result :0)
+      (t.= :0 bxor-result)
       (t.match "error:.*attempt to index.*global 'bit'" bxor-result
                "--use-bit-lib should make bitops fail in non-luajit"))))
 
@@ -213,7 +226,7 @@
     (t.= out out2 "lines and byte offsets should be stable")
     (t.match ":bytestart 5" out)
     (t.match ":byteend 7" out)
-    (t.match "   %(f \027%[7m%[123%]\027%[0m%)" (send "   (f [123])"))))
+    (t.match "   %(f «%[123%]»%)" (send "   (f [123])"))))
 
 (fn test-code []
   (let [(send comp) (wrap-repl)]
@@ -223,37 +236,43 @@
     (t.= (comp "fo") [:for :foo])))
 
 (fn test-error-handling []
-  (let [(send comp) (wrap-repl)]
+  (let [send (wrap-repl)]
     ;; we get the source in the error message
-    (t.match "%(let \027" (send "(let a)"))
+    (t.match "%(let «" (send "(let a)"))
     ;; repeated errors still get it
-    (t.match "%(let \027" (send "(let b)"))
+    (t.match "%(let «" (send "(let b)"))
     ;; repl commands don't mess it up
     (send ",complete l")
-    (t.match "%(let \027" (send "(let c)"))
+    (t.match "%(let «" (send "(let c)"))
     ;; parser errors should be properly displayed, albeit without ^ at position
     (t.match "invalid character: @" (send "(print @)"))
     ;; don't ignore trailing delimiters
     (t.match "unexpected closing delimiter %)" (send "565)"))))
 
 (fn test-locals-saving []
-  (let [(send comp) (wrap-repl)]
+  (let [send (wrap-repl)]
     (send (v (local x-y 5)))
     (send (v (let [x-y 55] nil)))
-    (send (v (fn abc [] nil)))
+    (send (v (fn abc [] :def)))
     (t.= (send (v x-y)) :5)
-    (t.= (send (v (type abc))) "function"))
-  (let [(send comp) (wrap-repl {:correlate true})]
+    (t.= (send (v (abc))) "def"))
+  (let [send (wrap-repl {:correlate true})]
     (send (v (local x 1)))
     (t.= (send "x") :1))
   ;; now let's try with an env
-  (let [(send comp) (wrap-repl {:env {: debug}})]
+  (let [send (wrap-repl {:env {: debug}})]
     (send (v (local xyz 55)))
     (t.= (send "xyz") :55)))
 
 (fn test-docstrings []
   (let [send (wrap-repl)]
     (tset fennel.macro-loaded :test.macros nil)
+    (t.= (.. "(if cond1 body1 ... condN bodyN)\n"
+             "  Conditional form.\n"
+             "  Takes any number of condition/body pairs and evaluates the first body where\n"
+             "  the condition evaluates to truthy. Similar to cond in other lisps.")
+         (send ",doc if")
+         "docstrings for specials")
     (t.= (.. "(doto val ...)\n  Evaluate val and splice it into the first "
              "argument of subsequent forms.")
          (send ",doc doto")
@@ -364,7 +383,13 @@
     (send (v (import-macros m :test.macros)))
     (t.= "(m.inc n)\n  Increments n by 1"
          (send ",doc m.inc")
-         ",doc should work on macro tables")))
+         ",doc works on macro tables")
+    (t.= (send ",doc while") (send ",doc while")
+         ",doc <callable> does not mutate target's :fnl/arglist metadata")
+    (send "(local tbl {})")
+    (send "(: (. (require :fennel) :metadata) :set tbl :fnl/docstring \"A TABLE\")")
+    (t.= "tbl\n  A TABLE" (send ",doc tbl")
+         ",doc works on tables")))
 
 (fn test-no-undocumented []
   (let [send (wrap-repl)
@@ -449,7 +474,8 @@
 
 (fn test-return []
   (let [opts {:readChunk #",return (.. :return :value)"
-              :onValues #nil}]
+              :onValues #nil
+              :env {}}]
     (t.= :returnvalue (fennel.repl opts))))
 
 (fn test-decorating-repl []
@@ -457,17 +483,18 @@
   (let [send (wrap-repl)]
     (send (v (let [readChunk ___repl___.readChunk]
                (fn ___repl___.readChunk [parser-state]
+                 (set ___repl___.readChunk readChunk)
                  (string.format "(- %s)" (readChunk parser-state))))))
-    (t.= (send (v (+ 1 2 3)))
-         "-6" "expected the result to be negated by the new readChunk")
+    (t.= "-6" (send (v (+ 1 2 3)))
+         "expected the result to be negated by the new readChunk")
     (send (v (let [onValues ___repl___.onValues]
                (fn ___repl___.onValues [vals]
                  (onValues (icollect [_ v (ipairs vals)]
-                             (.. "res: " v)))))))
-    (t.= (send (v (+ 1 2 3 4)))
-         "res: -10" "expected result to include \"res: \" preffix")
+                             (string.format "res: %s" v)))))))
+    (t.= "res: 10" (send (v (+ 1 2 3 4)))
+         "expected result to include \"res: \" preffix")
     (send (v (fn ___repl___.onError [errtype err lua-source] nil)))
-    (t.= (send (v (error :foo))) "" "expected error to be ignored")))
+    (t.= "" (send (v (error :foo))) "expected error to be ignored")))
 
 ;; Skip REPL tests in non-JIT Lua 5.1 only to avoid engine coroutine
 ;; limitation. Normally we want all tests to run on all versions, but in
@@ -478,6 +505,7 @@
     {: test-sym-completion
      : test-macro-completion
      : test-method-completion
+     : test-command-completion
      : test-help
      : test-exit
      : test-reload

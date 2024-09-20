@@ -1,13 +1,13 @@
 (local t (require :test.faith))
 (local fennel (require :fennel))
 
-(fn setup []
-  (set _G.tbl []))
-
 (macro == [form expected ?opts]
   `(let [(ok# val#) (pcall fennel.eval ,(view form) ,?opts)]
      (t.is ok# val#)
-     (t.= val# ,expected)))
+     (t.= ,expected val# ,(view form))))
+
+(macro assert-no-iife [code ...]
+  `(t.not-match "function _[0-9]+_" (fennel.compile-string ,(view code)) ,...))
 
 (fn test-calculations []
   (== (% 1 2 (- 1 2)) 0)
@@ -17,9 +17,13 @@
   (== (+ 1 2 (- 1 2)) 2)
   (== (+ 1 2 (^ 1 2)) 4)
   (== (- 1) -1)
+  (== (+ 99) 99)
+  (== (* 32) 32)
   (== (/ 2) 0.5))
 
+(local stderr io.stderr)
 (fn test-booleans []
+  (set io.stderr nil) ; silence deprecation warnings
   (== (not 39) false)
   (== (and true 12 "hey") "hey")
   (== (or false nil true 12 false) true)
@@ -29,6 +33,7 @@
   (== (and 43 table false) false)
   (== (and true true (values)) true)
   (== (and true (values true false)) false)
+  (== (or false (values false (do true))) true)
   (== (tostring (and _G.xyz (do _G.xyz.y) _G.xyz)) "nil")
   (== (not nil) true)
   (== (and true (values true false) true) true)
@@ -36,11 +41,89 @@
   (== (and (values)) true)
   (== (or 5) 5)
   (== (and) true)
+  ;; the side effect rules are complicated
+  (== (do (var i 1) (and true (values (set i 2) true)) i) 2)
+  (== (do (var i 1) (and false (values (set i 2) true)) i) 1)
+  (== (do (var i 1) (and true (values true (set i 2))) i) 2)
+  (== (do (var i 1) (and true (values false (set i 2))) i) 1)
+  (== (do (var i 1) (and true (do (values false (set i 2)))) i) 2)
+  ;; (and) should never return a second value under any circumstances
+  (== (let [(x y) (and true (values true true))] y) nil)
+  (== (let [(x y) (and true (values (values true true)))] y) nil)
+  (== (let [(x y) (and true (#(values true true)))] y) nil)
+  (== (let [(x y) (and true (do (values true true)))] y) nil)
   ;; short-circuit special forms
   (== (let [t {:a 85}] (or true (tset t :a 1)) t.a) 85)
   ;; short-circuit macros too
   (== (do (macro ts [t k v] `(tset ,t ,k ,v))
-          (let [t {:a 521}] (or true (ts t :a 1)) t.a)) 521))
+          (let [t {:a 521}] (or true (ts t :a 1)) t.a)) 521)
+  (== ((fn [...] (or (doto [...] (tset 4 4)) :never)) 1 2 3)
+      [1 2 3 4])
+  ;; short-circuit with methods
+  (== (do (var i 1) (let [x {:method #(set i 2)}] (and false (: (#x) (#:method))) i)) 1)
+  (== (do (var i 1) (let [x {:method #(set i 2)}] (and true (: (#x) (#:method))) i)) 2)
+  (== (do (var i 1) (let [x {:method #nil}] (and false (: (#x) (#:method) (set i 2))) i)) 1)
+  (== (do (var i 1) (let [x {:method #nil}] (and true (: (#x) (#:method) (set i 2))) i)) 2)
+  ;; address (not expr) bypassing short-circuit protections
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i) (or true (not (do (i++!)))) i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i)
+          (or true (not (when true (i++!))))
+          i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i)
+          (or true (length (do [(i++!)])))
+          i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i) (fn noop [])
+          (or true (noop (not (let [x (i++!)] (* x 2)))))
+          i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1))) (fn noop [])
+          (or true (noop [1 2 (i++!)]))
+          i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i)
+          (or true [:x :y (not (let [b (i++!)] b)) :z])
+          i)
+      1)
+  (== (do (var i 1)  (fn i++! [] (set i (+ i 1)) i)
+          (or true (and (let [x (i++!)] x) true))
+          i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i)
+          (or true (if (= i 1) (i++!)))
+          i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i)
+          (or true (for [j 1 1] (i++!)))
+          i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i)
+          (or true (each [j (ipairs [:item])] (i++!)))
+          i)
+      1)
+  (== (do (var i 1) (fn i++! [] (set i (+ i 1)) i)
+          (or true (while (= i 1) (i++!)))
+          i)
+      1)
+  (== (do (var i 1)
+          (or true (set i 2))
+          i)
+      1)
+  (== (let [t {:field 1}]
+          (or true (tset t :field 2))
+          t.field)
+      1)
+  (== (let [t {}]
+          (or true (fn t.field []))
+          t.field)
+      nil)
+  (== (do (var i 1)
+          (or (lua "i = i + 1" "true") (lua "i = i + 1" "true"))
+          i)
+      2)
+  (set io.stderr stderr))
 
 (fn test-comparisons []
   (== (= 1 1 2 2) false)
@@ -54,7 +137,8 @@
   (== (>= 22 (+ 21 1)) true)
   (== (not= 33 1) true)
   (== (> 2 0) true)
-  (== (let [f (fn [] (tset tbl :dbl (+ 1 (or (. tbl :dbl) 0))) 1)]
+  (== (let [tbl {}
+            f (fn [] (tset tbl :dbl (+ 1 (or (. tbl :dbl) 0))) 1)]
         (< 0 (f) 2) (. tbl :dbl)) 1))
 
 (fn test-functions []
@@ -84,7 +168,6 @@
   (== (let [add (fn [x y z] (+ x y z)) f2 (partial add 1 2)] (f2 6)) 9)
   (== (let [add (fn [x y] (+ x y)) add2 (partial add)] (add2 99 2)) 101)
   (== (let [add (fn [x y] (+ x y)) inc (partial add 1)] (inc 99)) 100)
-  (== (let [f #(values :a :b :c)] [(pick-values 0 (f))]) {})
   (== (let [f (fn [x y f2] (+ x (f2 y)))
             f2 (fn [x y] (* x (+ 2 y)))
             f3 (fn [f] (fn [x] (f 5 x)))]
@@ -96,7 +179,6 @@
   (== (let [t {:x 1} f (partial + t.x)]
         [(f 1) (do (set t.x 2) (f 1))]) [2 2])
   (== (pcall (lambda [string] nil) 1) true)
-  (== (select :# (pick-values 3)) 3)
   (== (do
         (tset (getmetatable ::) :__call (fn [s t] (. t s)))
         (let [res (:answer {:answer 42})]
@@ -108,7 +190,6 @@
         (let [f (fn [] (set a (+ a 2)))]
           (f) (f) a))
       15)
-  (== [(pick-values 4 :a :b :c (values :d :e))] ["a" "b" "c" "d"])
   (== ((fn [a & [b {: c}]] (string.format a (+ b c))) "haha %s" 4 {:c 3})
       "haha 7")
   (== ((fn [& {1 _ 2 _ 3 x}] x) :one :two :three) "three")
@@ -167,13 +248,33 @@
         (+ x y))
       9)
   (== (+ (. {:a 93 :b 4} :a) (. [1 2 3] 2)) 95)
-  (== (do (global a_b :global) (local a-b :local) a_b) "global")
+  (== (do (global a_b :global) (local a-b :local) a_b) "global"
+      {:env {}})
   (== (do (tset {} :a 1) 1) 1)
   (== (: {:foo (fn [self] (.. self.bar 2)) :bar :baz} :foo) "baz2")
   (== (do (local x#x# 90) x#x#) 90)
   (== (let [xx (let [xx 1] (* xx 2))] xx) 2)
   (== (let [t {}] (set t.a :multi) (. t :a)) "multi")
   (== (let [t []] (tset t :a (let [{: a} {:a :bcd}] a)) t.a) "bcd")
+  (== (let [t {:supported-chars {:x true}}
+            field1 :supported-chars
+            field2 :y]
+        (set (. t field1 field2) true) t.supported-chars.y) true)
+  (== (let [t {} tt [[]] value-two :hehe]
+        (var x nil)
+        (set ((. t 1) x (. tt 1 1)) (values :lol 2 :hey))
+        (set (. t 2) value-two)
+        (set [(. t 3)] [:lmao])
+        (set x 87)
+        (.. x (table.concat t " ") (table.concat (. tt 1))))
+      "87lol hehe lmaohey")
+  (== (do (set (. _G :dynamic-set-global?) true) _G.dynamic-set-global?)
+      true
+      {:env {:_G {}}})
+  (== (let [set-x #(do (set (. $1 :x) $2) $1)] (set-x {} :aw-yiss))
+      {:x :aw-yiss})
+  (== (let [t [8 9]] (set [(. t 1) (. t 2)] [(. t 2) (. t 1)]) t)
+      [9 8])
   (== (let [x 17] (. 17)) 17)
   (== (let [my-tbl {} k :key] (tset my-tbl k :val) my-tbl.key) "val")
   (== (let [t {} _ (tset t :a 84)] (. t :a)) 84)
@@ -201,7 +302,7 @@
           (set-forcibly! a 7)
           (set-forcibly! b 6)
           (+ a b))) 13)
-  (== (do (global x 1) (global x 284) x) 284)
+  (== (do (global x 1) (global x 284) x) 284 {:env {}})
   (== (do
         (var a nil)
         (var b nil)
@@ -232,8 +333,8 @@
 (fn test-destructuring []
   (== ((fn dest [a [b c] [d]] (+ a b c d)) 5 [9 7] [2]) 23)
   (== ((lambda [[a & b]] (+ a (. b 2))) [90 99 4]) 94)
-  (== (do (global (a b) ((fn [] (values 4 29)))) (+ a b)) 33)
-  (== (do (global [a b c d] [4 2 43 7]) (+ (* a b) (- c d))) 44)
+  (== (do (global (a b) ((fn [] (values 4 29)))) (+ a b)) 33 {:env {}})
+  (== (do (global [a b c d] [4 2 43 7]) (+ (* a b) (- c d))) 44 {:env {}})
   (== (let [(a [b [c] d]) ((fn [] (values 4 [2 [1] 9])))] (+ a b c d)) 16)
   (== (let [(a [b [c] d]) (values 4 [2 [1] 9])] (+ a b c d)) 16)
   (== (let [(a b) ((fn [] (values 4 2)))] (+ a b)) 6)
@@ -269,10 +370,16 @@
   (== (do
         (var x 0) (each [_ [a b] (ipairs [[1 2] [3 4]])]
                     (set x (+ x (* a b))))
-        x) 14))
+        x) 14)
+  (== (let [[a b & c &as t] [1 2 3 4]] a) 1)
+  (== (let [[a b & c &as t] [1 2 3 4]] b) 2)
+  (== (let [[a b & c &as t] [1 2 3 4]] c) [3 4])
+  (== (let [[a b & c &as t] [1 2 3 4]] t) [1 2 3 4]))
 
 (fn test-edge []
-  (== (do (local x (lua "y = 4" "6")) (* _G.y x)) 24)
+  (let [env {}]
+    (set env._G env)
+    (== (do (local x (lua "y = 4" "6")) (* _G.y x)) 24 {: env}))
   (== (length [(if (= (+ 1 1) 2) (values 1 2 3 4 5) (values 1 2 3))]) 5)
   (== (let [(a b c d e f g) (if (= (+ 1 1) 3)
                                 nil
@@ -312,7 +419,17 @@
   (== (tostring (let [t {:st {:v 5 :f #(+ $.v $2)}}
                       x (#(+ $ $2) 1 3)]
                   (t.st:f x)
-                  nil)) "nil"))
+                  nil)) "nil")
+  (== (let [x [:a] y x]
+        (tset (or x y) 2 :b)
+        (. y 2))
+      :b)
+  ;; we have to let fn names escape into surrounding scope
+  (== (let [f (fn abc-def [] 99)] (abc-def)) 99)
+  (== (let [x [#(tset $1 $2 $3)] y x]
+        (: x 1 2 :b)
+        (. y 2))
+      :b))
 
 (fn test-hashfn []
   (== (#$.foo {:foo :bar}) "bar")
@@ -361,6 +478,69 @@
         (x.y:foo :quux))
       "bazquux"))
 
+(fn test-values []
+  (== (let [(x y) (values :x (do :y))] [x y])
+      [:x :y])
+  (== [(values 1 2 (values 3 4) 4)]
+      [1 2 3 4])
+  (assert-no-iife [(values 1 2 (values 3 4) 4)])
+  (== (let [(x y z Z) (values :x (do :y) (values :z (do :Z)))] [x y z Z])
+      [:x :y :z :Z])
+  (== (let [t {:field :hi} f #t]
+        (tset (f :bork :bork) :field (values (do :BYE) (do :HI)))
+        t)
+      {:field :BYE})
+  (== (do (var i 0) (fn i++ [] (set i (+ 1 i)) i)
+          [(values (i++) (values (do (i++)) (do (i++))))])
+      [2 1 3])
+  (== (do (macro myvalues [x y z] `(values ,x ,y ,z))
+          [(values 1 2 (myvalues 3 4))])
+      [1 2 3 4]))
+
+(fn test-pick-values []
+  (== [(pick-values 4 0 (#(values 1 2 3 4)))] [0 1 2 3])
+  (== (do (var i 0) (fn i++ [] (set i (+ 1 i)) i)
+          [(pick-values 3 (i++) (do (i++)) (do (i++)))])
+      [2 1 3])
+  (== (select :# (pick-values 3))
+      3)
+  (== [(pick-values 0 (select 1 :a :b :c))]
+      [])
+  (== [(pick-values 4 :a :b :c (values :d :e))]
+      ["a" "b" "c" "d"])
+  ;; ensure pick-values output respects nval, e.g. in middle of table literal
+  (== [:X (pick-values 2 :Y :YY) :Z] [:X :Y :Z])
+  (== [:X (pick-values 0 :YY) :Y] [:X nil :Y])
+  (t.= "return (select(1, \"x\", \"y\", \"z\"))"
+       (fennel.compile-string "(pick-values 1 (select 1 :x :y :z))"))
+  (== [(if (= 1 1) (pick-values 1 (select 1 :x :y :z)) :bork)]
+      [:x])
+  (== (let [ret [(pick-values 3 :x :y (do :z) :A (do :B))]]
+        [ret (length ret)])
+    [[:x :y :z] 3])
+  (== (do (var i 0) (fn i++ [] (set i (+ i 1)) i)
+          (doto [(pick-values 1 (i++) (i++) (i++))]
+                (table.insert i)))
+      [3 3])
+  ;; Ensure (pick-values 0 ...) emits nil when needed, and keeps side effects
+  (== (do (var i 0) (fn i++ [] (set i (+ i 1)) i)
+          (doto [:X (pick-values 0 (i++) (i++) (i++)) :Y]
+                ;; Using tset because, in luajit and luajit only,
+                ;; (doto [:X (values) :Y] (table.insert :Z)) returns [:X 3 :Y]
+                (tset 4 i)))
+      [:X nil :Y 3])
+  (== (do (var i 0) (fn i++ [] (set i (+ i 1)) i)
+          (doto [(pick-values 2 (i++) (select 1 (i++) :X) (values (i++) (i++)))]
+                (table.insert i)))
+      [1 2 4])
+  (== (let [pack (or table.pack #(doto [$...] (tset :n (select :# $...))))
+            t (pack (pick-values 3 (pick-values 1 (values :x :y :z))))]
+        [t.n ((or _G.unpack table.unpack) t)])
+      [3 :x])
+  (== (let [pack (or table.pack #(doto [$...] (tset :n (select :# ...))))]
+        (pack (pick-values 5 :x (do :y) (do :z))))
+      {1 :x 2 :y 3 :z :n 5}))
+
 (fn test-with-open []
   (== (do
         (var fh nil)
@@ -381,7 +561,14 @@
       ["asdf" "closed file" "closed file"])
   (== [(with-open [proc1 (io.popen "echo hi") proc2 (io.popen "echo bye")]
          (values (proc1:read) (proc2:read)))]
-      ["hi" "bye"]))
+      ["hi" "bye"])
+  (== (do
+        (var fh nil)
+        (local (ok msg) (pcall #(with-open [f (io.tmpfile)]
+                                  (set fh f)
+                                  (error {:bork! :bark!}))))
+        [(io.type fh) ok (case msg {:bork! :bark!} msg _ "didn't match")])
+      ["closed file" false {:bork! :bark!}]))
 
 (fn test-comment []
   (t.= "--[[ hello world ]]\nreturn nil"
@@ -413,11 +600,9 @@
                 "added keys should be sorted: numbers>booleans>strings>tables>other"]]]
     (each [_ [input expected msg] (ipairs cases)]
       (t.= (: (fennel.compile-string input) :gsub "^return%s*" "")
-                      expected msg))))
+           expected msg))))
 
-{: setup
-
- : test-booleans
+{: test-booleans
  : test-calculations
  : test-comparisons
  : test-conditionals
@@ -427,6 +612,8 @@
  : test-functions
  : test-hashfn
  : test-if
+ : test-pick-values
+ : test-values
  : test-with-open
  : test-method-calls
  : test-comment

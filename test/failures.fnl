@@ -6,7 +6,7 @@
 ;; expanded before this code ever sees it.
 (macro assert-fail [form expected]
   `(let [(ok# msg#) (pcall fennel.compile-string (macrodebug ,form true)
-                           {:allowedGlobals ["pairs" "next" "ipairs" "_G"]
+                           {:allowedGlobals ["pairs" "next" "ipairs" "_G" "print"]
                             :correlate true})]
      (t.is (not ok#) (.. "Expected failure: " ,(tostring form)))
      (t.match ,expected msg#)))
@@ -62,6 +62,7 @@
   (assert-fail (fn [a & b c] nil)
                "expected rest argument before last parameter")
   (assert-fail (fn [...] (+ ...)) "tried to use vararg with operator")
+  (assert-fail (fn eugh.lol []) "expected local table eugh")
   (test-failures {"(lambda x)" "expected arg list"
                   "(fn [a & {3 3}] nil)" "unable to bind number 3"}))
 
@@ -114,6 +115,11 @@
   (assert-fail (let [x 1]) "expected body")
   (assert-fail (let [t {:a 1}] (+ t.a BAD)) "BAD")
   (assert-fail (local 47 :forty-seven) "unable to bind number 47")
+  (assert-fail (set (. 98 1) true) "needs symbol target")
+  (assert-fail (do (var t {}) (set (. t) true)) "needs at least one key")
+  (assert-fail (set (. FAKEGLOBAL :x) true) "unknown identifier")
+  (assert-fail (set [(. FAKEGLOBAL :x)] [true]) "unknown identifier")
+  (assert-fail (let [[first &as list & rest] []]  true) "&as argument before last parameter")
   (test-failures {"(local a~b 3)" "invalid character: ~"
                   "(let [t []] (set t.:x :y))" "malformed multisym: t.:x"
                   "(let [t []] (set t::x :y))" "malformed multisym: t::x"
@@ -121,11 +127,18 @@
                   "(let [x {:y {:foo (fn [self] self.bar) :bar :baz}}] x:y:foo)"
                   "method must be last component of multisym: x:y:foo"}))
 
+(fn parse-fail [code]
+  #(each [p (assert (fennel.parser code))] (assert p)))
+
 (fn test-parse-fails []
-  (test-failures
-   {"\n\n(+))" "unknown:3:3: Parse error: unexpected closing delimiter )"
-    "(foo:)" "malformed multisym"
-    "(foo.bar:)" "malformed multisym"}))
+  (t.error "malformed multisym" (parse-fail "(foo:)"))
+  (t.error "malformed multisym" (parse-fail "(foo.bar:)"))
+  (t.error "unknown:3:0: Parse error: expected closing delimiter %)"
+           (parse-fail "(do\n\n"))
+  (t.error "unknown:3:3: Parse error: unexpected closing delimiter %)"
+           (parse-fail "\n\n(+))"))
+  (t.error "mismatched closing delimiter }, expected %]"
+           (parse-fail "(fn \n[})")))
 
 (fn test-core-fails []
   (test-failures
@@ -164,7 +177,8 @@
     "(tail! [])"
     "Expected a function call as argument"
     "(do (tail! (print :x)) (print :y))"
-    "Must be in tail position"}))
+    "Must be in tail position"
+    "((values))" "cannot call literal value"}))
 
 (fn test-match-fails []
   (test-failures
@@ -264,6 +278,15 @@
   (let [(_ err) (pcall fennel.eval "(match 5 b)")]
     (t.not-match "fennel.compiler.macroexpand" err)))
 
+;; This does not prevent:
+;; (print (local abc :def)) (can't rely on nval)
+;; (if (fn abc []) :yes :no) (can't prevent function from being constructed)
+(fn test-disallow-locals []
+  (assert-fail (print (local xaby 10) xaby) "can't introduce local here")
+  (assert-fail (if (var x 10) (print x) (print x)) "can't introduce var")
+  (assert-fail (print (local abc :def)) "can't introduce local here")
+  (assert-fail (or (local x 10) x) "can't introduce local"))
+
 {: test-global-fails
  : test-fn-fails
  : test-binding-fails
@@ -274,4 +297,5 @@
  : test-macro
  : test-parse-fails
  : test-macro-traces
+ : test-disallow-locals
  : test-names}
