@@ -1,6 +1,6 @@
 # Summary of user-visible changes
 
-## 0.3.1 / ???
+## 0.3.1 / 2024-09-25
 
 * Update to Fennel 1.5.1.
 * Add manual.
