@@ -22,7 +22,11 @@ PARSER_FENNEL=antifnl/reader.fnl \
 		antifnl/parser.fnl
 
 antifennel: antifennel.fnl anticompiler.fnl letter.fnl $(PARSER_FENNEL)
+ifeq ($(filter /%,$(LUA)),)
 	echo "#!/usr/bin/env $(LUA)" > $@
+else
+	echo "#!$(LUA)" > $@
+endif
 	$(LUA) $(FENNEL) $(FENNEL_OPTS) $< >> $@
 	chmod 755 $@
 
