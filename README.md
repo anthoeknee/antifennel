@@ -26,9 +26,9 @@ not attempt to give good error messages when provided with files that
 won't parse or require newer features of Lua.
 
 Antifennel supports all [bitwise operators](https://www.lua.org/manual/5.3/manual.html#3.4.2)
-introduced in Lua 5.3.
+introduced in Lua 5.3. It does not support `<close>` or `<const>` from 5.4.
 
-Antifennel will never emit variadic operators, hashfns, or pattern
+Antifennel will not emit variadic operators, hashfns, or pattern
 matches, even in cases that would result in much better code.
 
 Fennel code does not support `goto`, so neither does Antifennel.
