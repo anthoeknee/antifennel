@@ -507,3 +507,10 @@
     nil (sym :nil)
 
     _ (unsupported ast)))
+
+;; Return the module
+{: map : mapcat : sequence : distinct : symlike? : p : make-scope
+ : add-to-scope : function : varize-local! : declare-function : identifier
+ : local-declaration : vals : any-complex-expressions? : early-return-bindings
+ : early-return-complex : early-return : flatten-associative : binary
+ : unary : call : send : compile}
