@@ -1,10 +1,18 @@
 ;; The name of this module is intended as a joke; this is in fact a compiler,
 ;; not an "anticompiler" even tho it goes in reverse from the fennel compiler
 ;; see https://nonadventures.com/2013/07/27/you-say-you-want-a-devolution/
-(local {: list : mangle : sym : sym? : view : sequence : sym-char?
-        : list? :comment make-comment}
-       (require :fennel))
-(local unpack (or table.unpack _G.unpack))
+
+(let [fennel (require :fennel)
+      list fennel.list
+      mangle fennel.mangle
+      sym fennel.sym
+      sym? fennel.sym?
+      view fennel.view
+      sequence fennel.sequence
+      sym-char? fennel.sym-char?
+      list? fennel.list?
+      make-comment fennel.comment
+      unpack (or table.unpack _G.unpack)]
 
 (fn map [tbl f with-last?]
   (let [len (length tbl)
