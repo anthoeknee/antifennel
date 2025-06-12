@@ -10,14 +10,30 @@
   (let [len (length tbl)
         out []]
     (each [i v (ipairs tbl)]
-      (table.insert out (f v (and with-last? (= i len)))))
+      (let [result (f v (and with-last? (= i len)))]
+        (if (list? result)
+            (each [_ item (ipairs result)]
+              (table.insert out item))
+            (table.insert out result))))
     out))
 
 (fn mapcat [tbl f]
   (let [out []]
     (each [_ v (ipairs tbl)]
-      (each [_ v (ipairs (f v))]
-        (table.insert out v)))
+      (let [result (f v)]
+        (if (list? result)
+            (each [_ item (ipairs result)]
+              (table.insert out item))
+            (table.insert out result))))
+    out))
+
+(fn sequence [& args]
+  (let [out []]
+    (each [_ v (ipairs args)]
+      (if (list? v)
+          (each [_ item (ipairs v)]
+            (table.insert out item))
+          (table.insert out v)))
     out))
 
 (fn distinct [tbl]
@@ -165,7 +181,11 @@
           (compile scope argument))))
 
 (fn call [compile scope {: arguments : callee}]
-  (list (compile scope callee) (unpack (map arguments (partial compile scope)))))
+  (let [callee-expr (compile scope callee)
+        args (map arguments (partial compile scope))]
+    (if (list? callee-expr)
+        (list callee-expr (unpack args))
+        (list (sym (tostring callee-expr)) (unpack args)))))
 
 (fn send [compile scope {: receiver : method : arguments}]
   (let [target (compile scope receiver)
@@ -376,6 +396,58 @@
   (when (os.getenv "DEBUG") (p ast))
   (error (.. ast.kind " is not supported on line " (or ast.line "?"))))
 
+(fn array [compile scope {: elements}]
+  (let [out []]
+    (each [_ v (ipairs elements)]
+      (let [result (compile scope v)]
+        (if (list? result)
+            (each [_ item (ipairs result)]
+              (table.insert out item))
+            (table.insert out result))))
+    out))
+
+(fn object [compile scope {: properties}]
+  (let [out []]
+    (each [_ {: key : value} (ipairs properties)]
+      (let [k (if (= :Identifier key.kind)
+                  (sym key.name)
+                  (compile scope key))
+            v (compile scope value)]
+        (if (list? v)
+            (each [_ item (ipairs v)]
+              (table.insert out k)
+              (table.insert out item))
+            (do
+              (table.insert out k)
+              (table.insert out v)))))
+    out))
+
+(fn expression-statement [compile scope {: expression}]
+  (let [result (compile scope expression)]
+    (if (list? result)
+        (sequence (unpack result))
+        result)))
+
+(fn program [compile scope {: body}]
+  (let [out []]
+    (each [_ v (ipairs body)]
+      (let [result (compile scope v)]
+        (if (list? result)
+            (each [_ item (ipairs result)]
+              (table.insert out item))
+            (table.insert out result))))
+    out))
+
+(fn block-statement [compile scope {: body}]
+  (let [out []]
+    (each [_ v (ipairs body)]
+      (let [result (compile scope v)]
+        (if (list? result)
+            (each [_ item (ipairs result)]
+              (table.insert out item))
+            (table.insert out result))))
+    out))
+
 (fn compile [scope ast tail?]
   (when (os.getenv "DEBUG") (print ast.kind " " (or ast.line "?")))
   (match ast.kind
@@ -412,6 +484,11 @@
     "Literal" (if (= nil ast.value) (sym :nil) ast.value)
     "Comment" (comment* ast)
     "Vararg" (sym "...")
+    "Array" (array compile scope ast)
+    "Object" (object compile scope ast)
+    "ExpressionStatement" (expression-statement compile scope ast)
+    "Program" (program compile scope ast)
+    "BlockStatement" (block-statement compile scope ast)
     nil (sym :nil)
 
     _ (unsupported ast)))
