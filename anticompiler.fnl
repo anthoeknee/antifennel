@@ -191,7 +191,11 @@
         (if (and (list? object) (= (sym ".") (. object 1)))
             (doto object (table.insert key))
             (list (sym ".") object key)))
-      (sym (.. (tostring (compile scope ast.object)) "." ast.property.name))))
+      (let [obj-str (tostring (compile scope ast.object))
+            prop-name ast.property.name]
+        (if (obj-str:match "^[%w_%.]+$")
+            (sym (.. obj-str "." prop-name))
+            (list (sym ".") (compile scope ast.object) prop-name)))))
 
 (fn if* [compile scope {: tests : cons : alternate} tail?]
   (each [_ v (ipairs cons)]
