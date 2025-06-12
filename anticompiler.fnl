@@ -69,7 +69,9 @@
     {: ast} (tset ast 1 :var)))
 
 (fn declare-function [compile scope ast]
-  (if (or ast.locald (= :MemberExpression ast.id.kind))
+  (if (not ast)
+      (sym :nil)
+      (or ast.locald (= :MemberExpression ast.id.kind))
       (doto (function compile scope ast)
         (table.insert 2 (compile scope ast.id)))
       (not (. scope ast.id.name))
@@ -123,7 +125,12 @@
         (any-complex-expressions? args (+ i 1)))))
 
 (fn early-return-bindings [binding-names bindings i arg originals]
-  (if (and (= :CallExpression (. originals i :kind)) (= i (length originals)))
+  (if (not originals)
+      (do
+        (table.insert binding-names (.. "___antifnl_rtn_" i "___"))
+        (table.insert bindings (sym (.. "___antifnl_rtn_" i "___")))
+        (table.insert bindings arg))
+      (and (= :CallExpression (. originals i :kind)) (= i (length originals)))
       (let [name (.. "___antifnl_rtns_" i "___")]
         (table.insert binding-names
                       (string.format "(table.unpack or _G.unpack)(%s)" name))
