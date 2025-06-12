@@ -96,9 +96,9 @@
           (declare-function compile scope (doto (. expressions 1)
                                             (tset :id (. names 1))
                                             (tset :locald true))))
-      (let [local-sym (sym :local)]
-        (add-to-scope scope :local (map names #$.name) local-sym)
-        (list local-sym
+      (let [local-keyword (sym :local)]
+        (add-to-scope scope :local (map names #$.name) local-keyword)
+        (list local-keyword
               (if (= 1 (length names))
                   (identifier (. names 1))
                   (list (unpack (map names (partial compile scope)))))
