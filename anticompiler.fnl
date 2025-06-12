@@ -130,7 +130,7 @@
         (table.insert binding-names (.. "___antifnl_rtn_" i "___"))
         (table.insert bindings (sym (.. "___antifnl_rtn_" i "___")))
         (table.insert bindings arg))
-      (and (= :CallExpression (. originals i :kind)) (= i (length originals)))
+      (and (. originals i) (= :CallExpression (. originals i :kind)) (= i (length originals)))
       (let [name (.. "___antifnl_rtns_" i "___")]
         (table.insert binding-names
                       (string.format "(table.unpack or _G.unpack)(%s)" name))
